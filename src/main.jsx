@@ -159,6 +159,24 @@ const demos = [
     formula: 'S_N(x)'
   },
   {
+    id: 'double-integral-volume',
+    title: '二重积分：曲顶柱体',
+    subject: 'calculus',
+    href: '微积分/二重积分：曲顶柱体.html',
+    summary: '旋转三维曲面，观察它在 xOy 平面的投影、曲顶柱体体积，以及沿 x/y 方向分割出的长条。',
+    icon: Grid3X3,
+    formula: '∫∫D f(x,y)dA'
+  },
+  {
+    id: 'triple-integral-density',
+    title: '三重积分：密度与质量',
+    subject: 'calculus',
+    href: '微积分/三重积分：密度与质量.html',
+    summary: '把三维区域切成体素，用颜色和透明度表示密度，观察质量如何由 ρ(x,y,z)ΔV 累加得到。',
+    icon: Grid3X3,
+    formula: '∭V ρ dV'
+  },
+  {
     id: 'surface-integral-coordinates',
     title: '对坐标的曲面积分',
     subject: 'calculus',

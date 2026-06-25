@@ -1,0 +1,1410 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>三重积分：密度与质量</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #071018;
+      --panel: rgba(12, 24, 33, 0.9);
+      --surface: #67e8a5;
+      --density-low: #38bdf8;
+      --density-high: #f6b24b;
+      --region: #22d3ee;
+      --highlight: #f6b24b;
+      --selected: #f8d66d;
+      --ink: #edf8f6;
+      --muted: #9fb4bd;
+      --muted-2: #718894;
+      --line: rgba(185, 214, 221, 0.18);
+      --radius: 8px;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 8%, rgba(103, 232, 165, 0.12), transparent 32%),
+        radial-gradient(circle at 84% 34%, rgba(246, 178, 75, 0.12), transparent 28%),
+        linear-gradient(180deg, #071018 0%, #0b1720 58%, #071018 100%);
+      color: var(--ink);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .app {
+      width: min(1760px, calc(100vw - 28px));
+      margin: 0 auto;
+      padding: 20px 0 28px;
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #f4fffd;
+      font-size: clamp(30px, 3.4vw, 52px);
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    .intro {
+      margin: 9px 0 0;
+      max-width: 980px;
+      color: var(--muted);
+      font-size: clamp(14px, 1.25vw, 18px);
+      font-weight: 720;
+      line-height: 1.56;
+    }
+
+    .formula-chip {
+      min-width: 350px;
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(12, 24, 33, 0.76);
+      box-shadow: var(--shadow);
+      color: #d9fbf0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 15px;
+      line-height: 1.55;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(720px, 1fr) minmax(360px, 430px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stage,
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .stage {
+      position: relative;
+      min-height: 780px;
+    }
+
+    .stage-head {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      z-index: 3;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      max-width: calc(100% - 32px);
+    }
+
+    .legend {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.72);
+      color: #d7e9ea;
+      font-size: 12px;
+      font-weight: 850;
+      backdrop-filter: blur(12px);
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color);
+      box-shadow: 0 0 18px var(--color);
+    }
+
+    #scene {
+      display: block;
+      width: 100%;
+      height: 780px;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+        #0a141d;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #scene.dragging {
+      cursor: grabbing;
+    }
+
+    .hover-card,
+    .selected-card {
+      position: absolute;
+      right: 18px;
+      z-index: 3;
+      min-width: 260px;
+      padding: 12px 13px;
+      border: 1px solid rgba(246, 178, 75, 0.36);
+      border-radius: var(--radius);
+      background: rgba(7, 16, 24, 0.78);
+      color: #ffe7ba;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(12px);
+    }
+
+    .hover-card {
+      bottom: 18px;
+    }
+
+    .selected-card {
+      top: 64px;
+      max-width: 345px;
+      border-color: rgba(248, 214, 109, 0.5);
+      background: rgba(20, 24, 18, 0.82);
+      transform: translateY(-6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .selected-card.visible {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .hover-card strong,
+    .selected-card strong {
+      display: block;
+      margin-bottom: 7px;
+      color: #fff4cc;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .hover-card div,
+    .selected-card div {
+      color: #f8d66d;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .hint {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      z-index: 3;
+      max-width: min(590px, calc(100% - 32px));
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.74);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      line-height: 1.55;
+      backdrop-filter: blur(12px);
+    }
+
+    .panel {
+      padding: 16px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      color: #f5fffb;
+      font-size: 22px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .integral-card {
+      margin-bottom: 14px;
+      padding: 14px;
+      border: 1px solid rgba(103, 232, 165, 0.24);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(103, 232, 165, 0.1), rgba(246, 178, 75, 0.08));
+      color: #dffcef;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 16px;
+      font-weight: 850;
+      line-height: 1.55;
+    }
+
+    .control-group {
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+      color: #dff9f2;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .value {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--surface);
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .preset-name {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.48);
+      color: #dff9f2;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .preset-select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.72);
+      color: #e9fff7;
+      padding: 0 10px;
+      font-size: 13px;
+      font-weight: 900;
+      outline: none;
+    }
+
+    .random-button,
+    .reset {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .random-button {
+      min-width: 88px;
+      color: #ffe7ba;
+      border-color: rgba(246, 178, 75, 0.38);
+      background: rgba(246, 178, 75, 0.09);
+    }
+
+    .reset {
+      width: 100%;
+      margin-top: 12px;
+      color: #dffcef;
+      border-color: rgba(103, 232, 165, 0.38);
+      background: rgba(103, 232, 165, 0.1);
+    }
+
+    .toggles {
+      display: grid;
+      gap: 9px;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.035);
+      color: #dcecea;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--surface);
+    }
+
+    .readout {
+      display: grid;
+      gap: 9px;
+      margin-top: 2px;
+    }
+
+    .readout-line {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 10px;
+      align-items: baseline;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.45);
+      color: #dcecea;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .readout-line span {
+      color: var(--muted-2);
+      font-weight: 900;
+    }
+
+    .math {
+      color: #f3fffb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .focus {
+      margin-top: 14px;
+      padding: 13px;
+      border: 1px solid rgba(103, 232, 165, 0.24);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(103, 232, 165, 0.09), rgba(246, 178, 75, 0.06));
+    }
+
+    .focus h3 {
+      margin: 0 0 8px;
+      color: #e9fff7;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    .focus p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 720;
+      line-height: 1.64;
+    }
+
+    @media (max-width: 1180px) {
+      .top,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .formula-chip {
+        min-width: 0;
+        white-space: normal;
+      }
+
+      .stage,
+      #scene {
+        min-height: 640px;
+        height: 640px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        width: min(100vw - 16px, 680px);
+        padding-top: 12px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .stage,
+      #scene {
+        min-height: 520px;
+        height: 520px;
+      }
+
+      .hover-card {
+        left: 12px;
+        right: 12px;
+        bottom: 72px;
+        min-width: 0;
+      }
+
+      .selected-card {
+        left: 12px;
+        right: 12px;
+        top: 104px;
+        max-width: none;
+        min-width: 0;
+      }
+
+      .hint {
+        left: 12px;
+        right: 12px;
+        max-width: none;
+      }
+
+      .readout-line,
+      .action-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div>
+        <h1>三重积分：密度与质量</h1>
+        <p class="intro">把三维区域 V 切成许多小体素，用颜色和透明度表示密度 ρ(x,y,z)。每个体素贡献 ρΔV，全部累加得到近似质量。</p>
+      </div>
+      <div class="formula-chip">M = ∭V ρ(x,y,z)dV<br />≈ Σ ρ(xᵢ,yⱼ,zₖ) ΔV</div>
+    </header>
+
+    <section class="layout" aria-label="三重积分密度与质量交互实验">
+      <div class="stage">
+        <div class="stage-head" aria-hidden="true">
+          <span class="legend"><i class="swatch" style="--color: var(--region)"></i>积分区域 V</span>
+          <span class="legend"><i class="swatch" style="--color: var(--density-low)"></i>低密度</span>
+          <span class="legend"><i class="swatch" style="--color: var(--density-high)"></i>高密度</span>
+          <span class="legend"><i class="swatch" style="--color: var(--highlight)"></i>悬停/选中体素</span>
+        </div>
+        <canvas id="scene" aria-label="三维区域、密度体素和三重积分质量累加"></canvas>
+        <div class="hover-card" aria-live="polite">
+          <strong id="hoverTitle">当前体素</strong>
+          <div id="hoverReadout">移动鼠标到体素上查看。</div>
+        </div>
+        <div class="selected-card" id="selectedCard" aria-live="polite">
+          <strong id="selectedTitle">已选中</strong>
+          <div id="selectedReadout">点击一个高亮体素查看信息。</div>
+        </div>
+        <div class="hint">按住画面拖动可旋转空间，滚轮缩放。点击高亮体素可固定查看该体素的密度、体积元与质量贡献。</div>
+      </div>
+
+      <aside class="panel" aria-label="交互控制">
+        <h2>区域与密度控制</h2>
+        <div class="integral-card">M ≈ Σ ρ(xᵢ,yⱼ,zₖ)ΔV<br /><span id="massReadout">M ≈ --</span></div>
+
+        <div class="control-group">
+          <div class="label-row"><span>积分区域</span><span class="value" id="regionName">长方体</span></div>
+          <div class="action-row">
+            <select id="regionSelect" class="preset-select" aria-label="选择积分区域">
+              <option value="box">长方体</option>
+              <option value="ellipsoid">椭球体</option>
+              <option value="capSolid">曲面投影立体</option>
+              <option value="tiltedCap">斜面投影立体</option>
+              <option value="waveCap">波浪曲面投影立体</option>
+              <option value="twinPeakCap">双峰曲面投影立体</option>
+              <option value="domeCap">抛物顶盖投影立体</option>
+              <option value="saddleCap">鞍形起伏投影立体</option>
+            </select>
+            <div class="preset-name" id="regionShort">盒状区域</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="label-row"><span>密度函数</span><span class="value" id="densityName">中心高密度</span></div>
+          <div class="action-row">
+            <div class="preset-name" id="densityShort">中心越近密度越大</div>
+            <button type="button" class="random-button" id="randomDensity">随机密度</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="label-row"><label for="splitCount">分割数量</label><span class="value" id="splitValue">8</span></div>
+          <input id="splitCount" type="range" min="4" max="14" step="1" value="8" />
+        </div>
+
+        <div class="control-group">
+          <div class="toggles">
+            <label class="toggle">显示区域边界 <input id="showRegion" type="checkbox" checked /></label>
+            <label class="toggle">显示密度体素 <input id="showVoxels" type="checkbox" checked /></label>
+            <label class="toggle">显示空间网格 <input id="showGrid" type="checkbox" checked /></label>
+          </div>
+          <button type="button" class="reset" id="resetView">重置视角</button>
+        </div>
+
+        <div class="control-group">
+          <div class="readout">
+            <div class="readout-line"><span>区域 V</span><div class="math" id="regionFormula">V = [-1.6,1.6] × [-1.35,1.35] × [-1.25,1.25]</div></div>
+            <div class="readout-line"><span>密度</span><div class="math" id="densityFormula">ρ = 0.45 + 1.25e⁻⁰·⁷⁽ˣ²⁺ʸ²⁺ᶻ²⁾</div></div>
+            <div class="readout-line"><span>体素数</span><div class="math" id="voxelCount">--</div></div>
+            <div class="readout-line"><span>体积元</span><div class="math" id="deltaReadout">ΔV = --</div></div>
+            <div class="readout-line"><span>当前密度</span><div class="math" id="rhoReadout">ρ(xᵢ,yⱼ,zₖ) = --</div></div>
+            <div class="readout-line"><span>质量项</span><div class="math" id="termReadout">ρΔV = --</div></div>
+          </div>
+        </div>
+
+        <div class="focus">
+          <h3>观察重点</h3>
+          <p>三重积分不是只算几何体积；当 ρ 表示密度时，每个小体素的质量是 ρΔV。颜色越暖的体素密度越高，对总质量贡献越大。</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="../vendor/three.min.js"></script>
+  <script>
+    const canvas = document.getElementById('scene');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x0a141d, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x0a141d, 8, 20);
+
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    camera.up.set(0, 0, 1);
+
+    const view = {
+      radius: 7.6,
+      yaw: -42,
+      pitch: 24,
+      target: new THREE.Vector3(0, 0, 0)
+    };
+
+    const state = {
+      regionPreset: 'box',
+      densityPreset: 'center',
+      splitCount: 8,
+      activeKey: null,
+      selectedKey: null,
+      showRegion: true,
+      showVoxels: true,
+      showGrid: true
+    };
+
+    const domain = {
+      min: -2,
+      max: 2
+    };
+
+    const colors = {
+      axisX: 0x7dd3fc,
+      axisY: 0x67e8a5,
+      axisZ: 0xf6b24b,
+      grid: 0x9fb4bd,
+      region: 0x22d3ee,
+      low: 0x38bdf8,
+      high: 0xf6b24b,
+      selected: 0xf8d66d
+    };
+
+    const groups = {
+      axes: new THREE.Group(),
+      labels: new THREE.Group(),
+      region: new THREE.Group(),
+      voxels: new THREE.Group(),
+      highlight: new THREE.Group(),
+      selected: new THREE.Group()
+    };
+
+    Object.values(groups).forEach(group => scene.add(group));
+
+    const ui = {
+      regionSelect: document.getElementById('regionSelect'),
+      randomDensity: document.getElementById('randomDensity'),
+      regionName: document.getElementById('regionName'),
+      regionShort: document.getElementById('regionShort'),
+      regionFormula: document.getElementById('regionFormula'),
+      densityName: document.getElementById('densityName'),
+      densityShort: document.getElementById('densityShort'),
+      densityFormula: document.getElementById('densityFormula'),
+      splitCount: document.getElementById('splitCount'),
+      splitValue: document.getElementById('splitValue'),
+      showRegion: document.getElementById('showRegion'),
+      showVoxels: document.getElementById('showVoxels'),
+      showGrid: document.getElementById('showGrid'),
+      resetView: document.getElementById('resetView'),
+      massReadout: document.getElementById('massReadout'),
+      voxelCount: document.getElementById('voxelCount'),
+      deltaReadout: document.getElementById('deltaReadout'),
+      rhoReadout: document.getElementById('rhoReadout'),
+      termReadout: document.getElementById('termReadout'),
+      hoverTitle: document.getElementById('hoverTitle'),
+      hoverReadout: document.getElementById('hoverReadout'),
+      selectedCard: document.getElementById('selectedCard'),
+      selectedTitle: document.getElementById('selectedTitle'),
+      selectedReadout: document.getElementById('selectedReadout')
+    };
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
+    let voxelMeshes = [];
+    let voxelData = new Map();
+    let stats = {
+      mass: 0,
+      deltaV: 0,
+      count: 0,
+      minRho: 0,
+      maxRho: 1
+    };
+
+    const lights = [
+      new THREE.AmbientLight(0xd9fff6, 1.55),
+      new THREE.DirectionalLight(0xffffff, 2.2),
+      new THREE.PointLight(0x67e8a5, 16, 13),
+      new THREE.PointLight(0xf6b24b, 13, 13)
+    ];
+    lights[1].position.set(4.5, -5.2, 6.5);
+    lights[2].position.set(-3.2, 2.8, 3.2);
+    lights[3].position.set(3.4, 2.8, 2.6);
+    lights.forEach(light => scene.add(light));
+
+    function capHeight(x, y) {
+      return 0.82 +
+        0.58 * Math.exp(-0.34 * (x * x + y * y)) +
+        0.18 * Math.sin(1.7 * x) * Math.cos(1.25 * y);
+    }
+
+    function makeCapSurfaceGeometry() {
+      const segments = 36;
+      const min = -1.65;
+      const max = 1.65;
+      const positions = [];
+      const indices = [];
+
+      for (let j = 0; j <= segments; j += 1) {
+        const y = min + (j / segments) * (max - min);
+        for (let i = 0; i <= segments; i += 1) {
+          const x = min + (i / segments) * (max - min);
+          positions.push(x, y, capHeight(x, y));
+        }
+      }
+
+      for (let j = 0; j < segments; j += 1) {
+        for (let i = 0; i < segments; i += 1) {
+          const a = j * (segments + 1) + i;
+          const b = a + 1;
+          const c = a + segments + 1;
+          const d = c + 1;
+          indices.push(a, c, b, b, c, d);
+        }
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function makeCapBaseGeometry() {
+      const min = -1.65;
+      const max = 1.65;
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+        min, min, 0,
+        max, min, 0,
+        max, max, 0,
+        min, max, 0
+      ], 3));
+      geometry.setIndex([0, 1, 2, 0, 2, 3]);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function makeCapWallGeometry(edge, constant) {
+      const segments = 36;
+      const min = -1.65;
+      const max = 1.65;
+      const positions = [];
+      const indices = [];
+
+      for (let i = 0; i <= segments; i += 1) {
+        const t = i / segments;
+        const variable = min + t * (max - min);
+        const x = edge === 'x' ? constant : variable;
+        const y = edge === 'y' ? constant : variable;
+        positions.push(x, y, 0, x, y, capHeight(x, y));
+      }
+
+      for (let i = 0; i < segments; i += 1) {
+        const a = i * 2;
+        const b = a + 1;
+        const c = a + 2;
+        const d = a + 3;
+        indices.push(a, c, b, b, c, d);
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function tiltedHeight(x, y) {
+      return 0.95 + 0.28 * x - 0.16 * y;
+    }
+
+    function waveHeight(x, y) {
+      return 1.02 + 0.24 * Math.sin(1.7 * x) + 0.2 * Math.cos(1.45 * y);
+    }
+
+    function twinPeakHeight(x, y) {
+      return 0.72 +
+        0.5 * Math.exp(-((x - 0.75) * (x - 0.75) + (y + 0.45) * (y + 0.45)) * 1.3) +
+        0.42 * Math.exp(-((x + 0.82) * (x + 0.82) + (y - 0.7) * (y - 0.7)) * 1.45);
+    }
+
+    function domeHeight(x, y) {
+      return 0.62 + 0.72 * Math.max(0, 1 - 0.16 * (x * x + y * y));
+    }
+
+    function saddleHeight(x, y) {
+      return 0.95 + 0.18 * x * y + 0.16 * Math.sin(1.2 * x - 0.8 * y);
+    }
+
+    function makeGraphSurfaceGeometry(heightFn, min = -1.65, max = 1.65) {
+      const segments = 36;
+      const positions = [];
+      const indices = [];
+
+      for (let j = 0; j <= segments; j += 1) {
+        const y = min + (j / segments) * (max - min);
+        for (let i = 0; i <= segments; i += 1) {
+          const x = min + (i / segments) * (max - min);
+          positions.push(x, y, heightFn(x, y));
+        }
+      }
+
+      for (let j = 0; j < segments; j += 1) {
+        for (let i = 0; i < segments; i += 1) {
+          const a = j * (segments + 1) + i;
+          const b = a + 1;
+          const c = a + segments + 1;
+          const d = c + 1;
+          indices.push(a, c, b, b, c, d);
+        }
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function makeGraphWallGeometry(heightFn, edge, constant, min = -1.65, max = 1.65) {
+      const segments = 36;
+      const positions = [];
+      const indices = [];
+
+      for (let i = 0; i <= segments; i += 1) {
+        const t = i / segments;
+        const variable = min + t * (max - min);
+        const x = edge === 'x' ? constant : variable;
+        const y = edge === 'y' ? constant : variable;
+        positions.push(x, y, 0, x, y, heightFn(x, y));
+      }
+
+      for (let i = 0; i < segments; i += 1) {
+        const a = i * 2;
+        const b = a + 1;
+        const c = a + 2;
+        const d = a + 3;
+        indices.push(a, c, b, b, c, d);
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function graphSolidInside(heightFn) {
+      return (x, y, z) => Math.abs(x) <= 1.65 && Math.abs(y) <= 1.65 && z >= 0 && z <= heightFn(x, y);
+    }
+
+    function graphSolidBoundary(heightFn) {
+      const top = makeGraphSurfaceGeometry(heightFn);
+      const base = makeCapBaseGeometry();
+      const sideMinX = makeGraphWallGeometry(heightFn, 'x', -1.65);
+      const sideMaxX = makeGraphWallGeometry(heightFn, 'x', 1.65);
+      const sideMinY = makeGraphWallGeometry(heightFn, 'y', -1.65);
+      const sideMaxY = makeGraphWallGeometry(heightFn, 'y', 1.65);
+      return [
+        new THREE.Mesh(top, regionSurfaceMaterial()),
+        new THREE.Mesh(base, regionSurfaceMaterial()),
+        new THREE.Mesh(sideMinX, regionSurfaceMaterial()),
+        new THREE.Mesh(sideMaxX, regionSurfaceMaterial()),
+        new THREE.Mesh(sideMinY, regionSurfaceMaterial()),
+        new THREE.Mesh(sideMaxY, regionSurfaceMaterial()),
+        new THREE.LineSegments(new THREE.WireframeGeometry(top), regionLineMaterial(0.28)),
+        new THREE.LineSegments(new THREE.WireframeGeometry(base), regionLineMaterial(0.2)),
+        new THREE.LineSegments(new THREE.WireframeGeometry(sideMinX), regionLineMaterial(0.22)),
+        new THREE.LineSegments(new THREE.WireframeGeometry(sideMaxX), regionLineMaterial(0.22)),
+        new THREE.LineSegments(new THREE.WireframeGeometry(sideMinY), regionLineMaterial(0.22)),
+        new THREE.LineSegments(new THREE.WireframeGeometry(sideMaxY), regionLineMaterial(0.22))
+      ];
+    }
+
+    const regionPresets = {
+      box: {
+        name: '长方体',
+        short: '盒状区域',
+        formula: 'V = [-1.6,1.6] × [-1.35,1.35] × [-1.25,1.25]',
+        inside: (x, y, z) => Math.abs(x) <= 1.6 && Math.abs(y) <= 1.35 && Math.abs(z) <= 1.25,
+        boundary: () => {
+          const geometry = new THREE.BoxGeometry(3.2, 2.7, 2.5);
+          const edges = new THREE.EdgesGeometry(geometry);
+          return [new THREE.LineSegments(edges, regionLineMaterial())];
+        }
+      },
+      ellipsoid: {
+        name: '椭球体',
+        short: '三个方向伸缩不同',
+        formula: 'V = {x²/1.8² + y²/1.15² + z²/1.45² ≤ 1}',
+        inside: (x, y, z) => (x * x) / (1.8 * 1.8) + (y * y) / (1.15 * 1.15) + (z * z) / (1.45 * 1.45) <= 1,
+        boundary: () => {
+          const geometry = new THREE.SphereGeometry(1, 30, 18);
+          geometry.scale(1.8, 1.15, 1.45);
+          return [new THREE.Mesh(geometry, regionSurfaceMaterial()), new THREE.LineSegments(new THREE.WireframeGeometry(geometry), regionLineMaterial(0.18))];
+        }
+      },
+      capSolid: {
+        name: '曲面投影立体',
+        short: '悬空曲面到 xOy 投影之间',
+        formula: 'V = {(x,y,z): -1.65≤x,y≤1.65, 0≤z≤g(x,y)}',
+        inside: (x, y, z) => Math.abs(x) <= 1.65 && Math.abs(y) <= 1.65 && z >= 0 && z <= capHeight(x, y),
+        boundary: () => {
+          const top = makeCapSurfaceGeometry();
+          const base = makeCapBaseGeometry();
+          const sideMinX = makeCapWallGeometry('x', -1.65);
+          const sideMaxX = makeCapWallGeometry('x', 1.65);
+          const sideMinY = makeCapWallGeometry('y', -1.65);
+          const sideMaxY = makeCapWallGeometry('y', 1.65);
+          return [
+            new THREE.Mesh(top, regionSurfaceMaterial()),
+            new THREE.Mesh(base, regionSurfaceMaterial()),
+            new THREE.Mesh(sideMinX, regionSurfaceMaterial()),
+            new THREE.Mesh(sideMaxX, regionSurfaceMaterial()),
+            new THREE.Mesh(sideMinY, regionSurfaceMaterial()),
+            new THREE.Mesh(sideMaxY, regionSurfaceMaterial()),
+            new THREE.LineSegments(new THREE.WireframeGeometry(top), regionLineMaterial(0.28)),
+            new THREE.LineSegments(new THREE.WireframeGeometry(base), regionLineMaterial(0.2)),
+            new THREE.LineSegments(new THREE.WireframeGeometry(sideMinX), regionLineMaterial(0.22)),
+            new THREE.LineSegments(new THREE.WireframeGeometry(sideMaxX), regionLineMaterial(0.22)),
+            new THREE.LineSegments(new THREE.WireframeGeometry(sideMinY), regionLineMaterial(0.22)),
+            new THREE.LineSegments(new THREE.WireframeGeometry(sideMaxY), regionLineMaterial(0.22))
+          ];
+        }
+      },
+      tiltedCap: {
+        name: '斜面投影立体',
+        short: '倾斜顶面到 xOy 投影之间',
+        formula: 'V = {(x,y,z): -1.65≤x,y≤1.65, 0≤z≤0.95+0.28x-0.16y}',
+        inside: graphSolidInside(tiltedHeight),
+        boundary: () => graphSolidBoundary(tiltedHeight)
+      },
+      waveCap: {
+        name: '波浪曲面投影立体',
+        short: '起伏曲面到 xOy 投影之间',
+        formula: 'V = {(x,y,z): -1.65≤x,y≤1.65, 0≤z≤1.02+0.24sin(1.7x)+0.20cos(1.45y)}',
+        inside: graphSolidInside(waveHeight),
+        boundary: () => graphSolidBoundary(waveHeight)
+      },
+      twinPeakCap: {
+        name: '双峰曲面投影立体',
+        short: '双峰顶盖到 xOy 投影之间',
+        formula: 'V = {(x,y,z): -1.65≤x,y≤1.65, 0≤z≤h(x,y)}',
+        inside: graphSolidInside(twinPeakHeight),
+        boundary: () => graphSolidBoundary(twinPeakHeight)
+      },
+      domeCap: {
+        name: '抛物顶盖投影立体',
+        short: '中间高、四周低的顶盖',
+        formula: 'V = {(x,y,z): -1.65≤x,y≤1.65, 0≤z≤0.62+0.72(1-0.16x²-0.16y²)}',
+        inside: graphSolidInside(domeHeight),
+        boundary: () => graphSolidBoundary(domeHeight)
+      },
+      saddleCap: {
+        name: '鞍形起伏投影立体',
+        short: '一侧升高、一侧降低的起伏顶面',
+        formula: 'V = {(x,y,z): -1.65≤x,y≤1.65, 0≤z≤0.95+0.18xy+0.16sin(1.2x-0.8y)}',
+        inside: graphSolidInside(saddleHeight),
+        boundary: () => graphSolidBoundary(saddleHeight)
+      }
+    };
+
+    const densityPresets = {
+      center: {
+        name: '中心高密度',
+        short: '中心越近密度越大',
+        formula: 'ρ = 0.45 + 1.25e⁻⁰·⁷⁽ˣ²⁺ʸ²⁺ᶻ²⁾',
+        sample: (x, y, z) => 0.45 + 1.25 * Math.exp(-0.7 * (x * x + y * y + z * z))
+      },
+      gradient: {
+        name: '线性梯度',
+        short: '右上方密度更大',
+        formula: 'ρ = 0.85 + 0.22x + 0.16y + 0.12z',
+        sample: (x, y, z) => 0.85 + 0.22 * x + 0.16 * y + 0.12 * z
+      },
+      twin: {
+        name: '双峰密度',
+        short: '两个局部高密度团',
+        formula: 'ρ = 0.35 + 1.1e⁻ᵃ + 0.85e⁻ᵇ',
+        sample: (x, y, z) => 0.35 +
+          1.1 * Math.exp(-((x - 0.85) ** 2 + (y + 0.45) ** 2 + (z - 0.25) ** 2) * 1.25) +
+          0.85 * Math.exp(-((x + 0.75) ** 2 + (y - 0.75) ** 2 + (z + 0.55) ** 2) * 1.4)
+      },
+      wave: {
+        name: '波动密度',
+        short: '空间中有周期起伏',
+        formula: 'ρ = 0.95 + 0.26sin(1.7x) + 0.22cos(1.4y) + 0.18sin(1.5z)',
+        sample: (x, y, z) => 0.95 + 0.26 * Math.sin(1.7 * x) + 0.22 * Math.cos(1.4 * y) + 0.18 * Math.sin(1.5 * z)
+      }
+    };
+
+    const densityKeys = Object.keys(densityPresets);
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function rhoAt(x, y, z) {
+      return Math.max(0.05, densityPresets[state.densityPreset].sample(x, y, z));
+    }
+
+    function regionLineMaterial(opacity = 0.62) {
+      return new THREE.LineBasicMaterial({ color: colors.region, transparent: true, opacity });
+    }
+
+    function regionSurfaceMaterial() {
+      return new THREE.MeshBasicMaterial({
+        color: colors.region,
+        transparent: true,
+        opacity: 0.08,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+    }
+
+    function clearGroup(group) {
+      group.traverse(object => {
+        if (object.geometry && object.geometry !== voxelGeometry) object.geometry.dispose();
+        if (object.material) {
+          if (Array.isArray(object.material)) object.material.forEach(material => material.dispose());
+          else object.material.dispose();
+        }
+        if (object.material && object.material.map) object.material.map.dispose();
+      });
+      group.clear();
+    }
+
+    function makeTextSprite(text, color = '#edf8f6') {
+      const size = 128;
+      const textCanvas = document.createElement('canvas');
+      textCanvas.width = size;
+      textCanvas.height = size;
+      const ctx = textCanvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      ctx.font = '900 54px Inter, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 10;
+      ctx.fillText(text, size / 2, size / 2);
+      const texture = new THREE.CanvasTexture(textCanvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(0.42, 0.42, 0.42);
+      return sprite;
+    }
+
+    function drawAxis(direction, color, label, position) {
+      const arrow = new THREE.ArrowHelper(direction.clone().normalize(), new THREE.Vector3(0, 0, 0), 2.85, color, 0.2, 0.1);
+      groups.axes.add(arrow);
+      const sprite = makeTextSprite(label, `#${color.toString(16).padStart(6, '0')}`);
+      sprite.position.copy(position);
+      groups.labels.add(sprite);
+    }
+
+    function buildAxes() {
+      clearGroup(groups.axes);
+      clearGroup(groups.labels);
+
+      if (state.showGrid) {
+        const gridMaterial = new THREE.LineBasicMaterial({ color: colors.grid, transparent: true, opacity: 0.14 });
+        const vertices = [];
+        const min = -2.2;
+        const max = 2.2;
+        for (let z = -2; z <= 2.001; z += 0.5) {
+          vertices.push(min, min, z, max, min, z, min, max, z, max, max, z);
+          vertices.push(min, min, z, min, max, z, max, min, z, max, max, z);
+        }
+        for (let i = min; i <= max + 0.001; i += 0.5) {
+          vertices.push(i, min, -2, i, min, 2, min, i, -2, min, i, 2);
+          vertices.push(i, max, -2, i, max, 2, max, i, -2, max, i, 2);
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        groups.axes.add(new THREE.LineSegments(geometry, gridMaterial));
+      }
+
+      drawAxis(new THREE.Vector3(1, 0, 0), colors.axisX, 'x', new THREE.Vector3(3.05, 0, 0));
+      drawAxis(new THREE.Vector3(0, 1, 0), colors.axisY, 'y', new THREE.Vector3(0, 3.05, 0));
+      drawAxis(new THREE.Vector3(0, 0, 1), colors.axisZ, 'z', new THREE.Vector3(0, 0, 3.05));
+    }
+
+    function densityColor(t) {
+      const value = clamp(t, 0, 1);
+      const stops = [
+        new THREE.Color(0x2563eb),
+        new THREE.Color(0x06b6d4),
+        new THREE.Color(0x22c55e),
+        new THREE.Color(0xeab308),
+        new THREE.Color(0xf97316)
+      ];
+      const scaled = value * (stops.length - 1);
+      const index = Math.min(stops.length - 2, Math.floor(scaled));
+      return stops[index].clone().lerp(stops[index + 1], scaled - index);
+    }
+
+    function addRegionBoundary() {
+      clearGroup(groups.region);
+      if (!state.showRegion) return;
+      regionPresets[state.regionPreset].boundary().forEach(object => groups.region.add(object));
+    }
+
+    function addVoxels() {
+      clearGroup(groups.voxels);
+      voxelMeshes = [];
+      voxelData = new Map();
+      stats = { mass: 0, deltaV: 0, count: 0, minRho: Infinity, maxRho: -Infinity };
+
+      const n = state.splitCount;
+      const span = domain.max - domain.min;
+      const step = span / n;
+      const deltaV = step * step * step;
+      const inside = regionPresets[state.regionPreset].inside;
+      const raw = [];
+
+      for (let ix = 0; ix < n; ix += 1) {
+        for (let iy = 0; iy < n; iy += 1) {
+          for (let iz = 0; iz < n; iz += 1) {
+            const x = domain.min + (ix + 0.5) * step;
+            const y = domain.min + (iy + 0.5) * step;
+            const z = domain.min + (iz + 0.5) * step;
+            if (!inside(x, y, z)) continue;
+            const rho = rhoAt(x, y, z);
+            raw.push({ key: `${ix}:${iy}:${iz}`, ix, iy, iz, x, y, z, rho, deltaV, contribution: rho * deltaV });
+            stats.minRho = Math.min(stats.minRho, rho);
+            stats.maxRho = Math.max(stats.maxRho, rho);
+            stats.mass += rho * deltaV;
+          }
+        }
+      }
+
+      stats.count = raw.length;
+      stats.deltaV = deltaV;
+      if (!raw.length) {
+        stats.minRho = 0;
+        stats.maxRho = 1;
+      }
+
+      if (!state.showVoxels) return;
+
+      raw.forEach(item => {
+        const t = (item.rho - stats.minRho) / Math.max(0.001, stats.maxRho - stats.minRho);
+        const material = new THREE.MeshBasicMaterial({
+          color: densityColor(t),
+          transparent: true,
+          opacity: 0.54 + 0.34 * t,
+          depthWrite: true
+        });
+        const mesh = new THREE.Mesh(voxelGeometry, material);
+        const size = step * 0.78;
+        mesh.scale.set(size, size, size);
+        mesh.position.set(item.x, item.y, item.z);
+        mesh.userData.key = item.key;
+        groups.voxels.add(mesh);
+        voxelMeshes.push(mesh);
+        voxelData.set(item.key, item);
+      });
+    }
+
+    function addVoxelHighlight(group, item, color, opacity, scaleBoost = 1.08) {
+      if (!item) return;
+      const step = (domain.max - domain.min) / state.splitCount;
+      const mesh = new THREE.Mesh(voxelGeometry, new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      }));
+      const size = step * 0.88 * scaleBoost;
+      mesh.scale.set(size, size, size);
+      mesh.position.set(item.x, item.y, item.z);
+      mesh.renderOrder = 30;
+      group.add(mesh);
+    }
+
+    function updateActiveVoxel(key) {
+      if (state.activeKey === key) return;
+      state.activeKey = key;
+      clearGroup(groups.highlight);
+      addVoxelHighlight(groups.highlight, voxelData.get(key), colors.high, 0.48, 1.1);
+      updateReadout();
+    }
+
+    function updateSelectedVoxel(key) {
+      if (state.selectedKey === key) return;
+      state.selectedKey = key;
+      clearGroup(groups.selected);
+      addVoxelHighlight(groups.selected, voxelData.get(key), colors.selected, 0.42, 1.16);
+      updateSelectedReadout();
+    }
+
+    function rebuildScene() {
+      state.activeKey = null;
+      state.selectedKey = null;
+      buildAxes();
+      addRegionBoundary();
+      addVoxels();
+      clearGroup(groups.highlight);
+      clearGroup(groups.selected);
+      updateReadout();
+      updateSelectedReadout();
+    }
+
+    function updateReadout() {
+      const region = regionPresets[state.regionPreset];
+      const density = densityPresets[state.densityPreset];
+      const active = voxelData.get(state.activeKey);
+      ui.regionSelect.value = state.regionPreset;
+      ui.regionName.textContent = region.name;
+      ui.regionShort.textContent = region.short;
+      ui.regionFormula.textContent = region.formula;
+      ui.densityName.textContent = density.name;
+      ui.densityShort.textContent = density.short;
+      ui.densityFormula.textContent = density.formula;
+      ui.splitValue.textContent = String(state.splitCount);
+      ui.massReadout.textContent = `M ≈ ${stats.mass.toFixed(2)}`;
+      ui.voxelCount.textContent = `${stats.count} 个体素`;
+      ui.deltaReadout.textContent = `ΔV = ${stats.deltaV.toFixed(3)}`;
+
+      if (!active) {
+        ui.hoverTitle.textContent = '当前体素';
+        ui.hoverReadout.textContent = '移动鼠标到体素上查看。';
+        ui.rhoReadout.textContent = 'ρ(xᵢ,yⱼ,zₖ) = --';
+        ui.termReadout.textContent = 'ρΔV = --';
+        return;
+      }
+
+      ui.hoverTitle.textContent = `体素 (${active.ix + 1}, ${active.iy + 1}, ${active.iz + 1})`;
+      ui.hoverReadout.innerHTML = `(xᵢ,yⱼ,zₖ)=(${active.x.toFixed(2)}, ${active.y.toFixed(2)}, ${active.z.toFixed(2)})<br />ρ=${active.rho.toFixed(2)}<br />ΔV=${active.deltaV.toFixed(3)}<br />ρΔV≈${active.contribution.toFixed(3)}`;
+      ui.rhoReadout.textContent = `ρ(${active.x.toFixed(2)}, ${active.y.toFixed(2)}, ${active.z.toFixed(2)}) = ${active.rho.toFixed(2)}`;
+      ui.termReadout.textContent = `ρΔV ≈ ${active.contribution.toFixed(3)}`;
+    }
+
+    function updateSelectedReadout() {
+      const selected = voxelData.get(state.selectedKey);
+      if (!selected) {
+        ui.selectedCard.classList.remove('visible');
+        ui.selectedTitle.textContent = '已选中';
+        ui.selectedReadout.textContent = '点击一个高亮体素查看信息。';
+        return;
+      }
+
+      ui.selectedTitle.textContent = `已选中：体素 (${selected.ix + 1}, ${selected.iy + 1}, ${selected.iz + 1})`;
+      ui.selectedReadout.innerHTML = `ρ=${selected.rho.toFixed(2)}<br />ΔV=${selected.deltaV.toFixed(3)}<br />(xᵢ,yⱼ,zₖ)=(${selected.x.toFixed(2)}, ${selected.y.toFixed(2)}, ${selected.z.toFixed(2)})<br />质量贡献 ρΔV≈${selected.contribution.toFixed(3)}`;
+      ui.selectedCard.classList.add('visible');
+    }
+
+    function setCameraFromView() {
+      const yaw = view.yaw * Math.PI / 180;
+      const pitch = view.pitch * Math.PI / 180;
+      const x = view.radius * Math.cos(pitch) * Math.cos(yaw);
+      const y = view.radius * Math.cos(pitch) * Math.sin(yaw);
+      const z = view.radius * Math.sin(pitch);
+      camera.position.set(x, y, z).add(view.target);
+      camera.lookAt(view.target);
+    }
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.floor(rect.width));
+      const height = Math.max(1, Math.floor(rect.height));
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+
+    function resetView() {
+      view.radius = 7.6;
+      view.yaw = -42;
+      view.pitch = 24;
+      setCameraFromView();
+    }
+
+    function updateHoverFromPointer(event) {
+      if (!state.showVoxels || !voxelMeshes.length) return updateActiveVoxel(null);
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(voxelMeshes, false);
+      updateActiveVoxel(hits.length ? hits[0].object.userData.key : null);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      setCameraFromView();
+      renderer.render(scene, camera);
+    }
+
+    function chooseRandom(current, keys) {
+      const next = keys.filter(key => key !== current);
+      return next[Math.floor(Math.random() * next.length)];
+    }
+
+    function attachControls() {
+      let dragging = false;
+      let lastX = 0;
+      let lastY = 0;
+      let downX = 0;
+      let downY = 0;
+      let didDrag = false;
+
+      canvas.addEventListener('pointerdown', event => {
+        dragging = true;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        downX = event.clientX;
+        downY = event.clientY;
+        didDrag = false;
+        canvas.classList.add('dragging');
+        canvas.setPointerCapture(event.pointerId);
+      });
+
+      canvas.addEventListener('pointermove', event => {
+        if (dragging) {
+          const dx = event.clientX - lastX;
+          const dy = event.clientY - lastY;
+          const totalDx = event.clientX - downX;
+          const totalDy = event.clientY - downY;
+          didDrag = didDrag || Math.hypot(totalDx, totalDy) > 5;
+          lastX = event.clientX;
+          lastY = event.clientY;
+          view.yaw = clamp(view.yaw + dx * 0.45, -180, 180);
+          view.pitch = clamp(view.pitch - dy * 0.35, -70, 80);
+        }
+        updateHoverFromPointer(event);
+      });
+
+      canvas.addEventListener('pointerup', event => {
+        updateHoverFromPointer(event);
+        if (!didDrag) updateSelectedVoxel(state.activeKey);
+        dragging = false;
+        canvas.classList.remove('dragging');
+        canvas.releasePointerCapture(event.pointerId);
+      });
+
+      canvas.addEventListener('pointercancel', () => {
+        dragging = false;
+        didDrag = false;
+        canvas.classList.remove('dragging');
+      });
+
+      canvas.addEventListener('pointerleave', () => {
+        if (!dragging) updateActiveVoxel(null);
+      });
+
+      canvas.addEventListener('wheel', event => {
+        event.preventDefault();
+        view.radius = clamp(view.radius + event.deltaY * 0.004, 4.8, 12.5);
+      }, { passive: false });
+
+      canvas.addEventListener('dblclick', resetView);
+      ui.resetView.addEventListener('click', resetView);
+
+      ui.regionSelect.addEventListener('change', event => {
+        state.regionPreset = event.target.value;
+        rebuildScene();
+      });
+
+      ui.randomDensity.addEventListener('click', () => {
+        state.densityPreset = chooseRandom(state.densityPreset, densityKeys);
+        rebuildScene();
+      });
+
+      ui.splitCount.addEventListener('input', event => {
+        state.splitCount = Number(event.target.value);
+        rebuildScene();
+      });
+
+      ui.showRegion.addEventListener('change', event => {
+        state.showRegion = event.target.checked;
+        addRegionBoundary();
+      });
+
+      ui.showVoxels.addEventListener('change', event => {
+        state.showVoxels = event.target.checked;
+        state.activeKey = null;
+        state.selectedKey = null;
+        addVoxels();
+        clearGroup(groups.highlight);
+        clearGroup(groups.selected);
+        updateReadout();
+        updateSelectedReadout();
+      });
+
+      ui.showGrid.addEventListener('change', event => {
+        state.showGrid = event.target.checked;
+        buildAxes();
+      });
+
+      window.addEventListener('resize', resize);
+    }
+
+    rebuildScene();
+    resetView();
+    resize();
+    attachControls();
+    animate();
+  </script>
+</body>
+</html>

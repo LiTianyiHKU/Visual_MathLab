@@ -1,0 +1,1429 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>二重积分：曲顶柱体</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #071018;
+      --panel: rgba(12, 24, 33, 0.9);
+      --panel-2: rgba(17, 34, 45, 0.88);
+      --surface: #67e8a5;
+      --surface-2: #2dd4bf;
+      --projection: #3b82f6;
+      --volume: #22d3ee;
+      --highlight: #f6b24b;
+      --ink: #edf8f6;
+      --muted: #9fb4bd;
+      --muted-2: #718894;
+      --line: rgba(185, 214, 221, 0.18);
+      --line-strong: rgba(196, 231, 232, 0.34);
+      --radius: 8px;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 22% 8%, rgba(103, 232, 165, 0.13), transparent 32%),
+        radial-gradient(circle at 82% 30%, rgba(59, 130, 246, 0.13), transparent 30%),
+        linear-gradient(180deg, #071018 0%, #0b1720 58%, #071018 100%);
+      color: var(--ink);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .app {
+      width: min(1760px, calc(100vw - 28px));
+      margin: 0 auto;
+      padding: 20px 0 28px;
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #f4fffd;
+      font-size: clamp(30px, 3.4vw, 52px);
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    .intro {
+      margin: 9px 0 0;
+      max-width: 980px;
+      color: var(--muted);
+      font-size: clamp(14px, 1.25vw, 18px);
+      font-weight: 720;
+      line-height: 1.56;
+    }
+
+    .formula-chip {
+      min-width: 350px;
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(12, 24, 33, 0.76);
+      box-shadow: var(--shadow);
+      color: #d9fbf0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 15px;
+      line-height: 1.55;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(720px, 1fr) minmax(360px, 430px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stage,
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .stage {
+      position: relative;
+      min-height: 780px;
+    }
+
+    .stage-head {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      z-index: 3;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      max-width: calc(100% - 32px);
+    }
+
+    .legend {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.72);
+      color: #d7e9ea;
+      font-size: 12px;
+      font-weight: 850;
+      backdrop-filter: blur(12px);
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color);
+      box-shadow: 0 0 18px var(--color);
+    }
+
+    #scene {
+      display: block;
+      width: 100%;
+      height: 780px;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+        #0a141d;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #scene.dragging {
+      cursor: grabbing;
+    }
+
+    .hover-card,
+    .selected-card {
+      position: absolute;
+      z-index: 3;
+      min-width: 250px;
+      padding: 12px 13px;
+      border: 1px solid rgba(246, 178, 75, 0.36);
+      border-radius: var(--radius);
+      background: rgba(7, 16, 24, 0.78);
+      color: #ffe7ba;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(12px);
+    }
+
+    .hover-card {
+      right: 18px;
+      bottom: 18px;
+    }
+
+    .selected-card {
+      right: 18px;
+      top: 64px;
+      max-width: 330px;
+      border-color: rgba(248, 214, 109, 0.5);
+      background: rgba(20, 24, 18, 0.82);
+      transform: translateY(-6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .selected-card.visible {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .hover-card strong,
+    .selected-card strong {
+      display: block;
+      margin-bottom: 7px;
+      color: #fff4cc;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .hover-card div,
+    .selected-card div {
+      color: #f8d66d;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .hint {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      z-index: 3;
+      max-width: min(590px, calc(100% - 32px));
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.74);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      line-height: 1.55;
+      backdrop-filter: blur(12px);
+    }
+
+    .panel {
+      padding: 16px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      color: #f5fffb;
+      font-size: 22px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .integral-card {
+      margin-bottom: 14px;
+      padding: 14px;
+      border: 1px solid rgba(103, 232, 165, 0.24);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(103, 232, 165, 0.1), rgba(59, 130, 246, 0.08));
+      color: #dffcef;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 16px;
+      font-weight: 850;
+      line-height: 1.55;
+    }
+
+    .control-group {
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+      color: #dff9f2;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .value {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--surface);
+    }
+
+    .segments {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .segments button,
+    .random-surface,
+    .reset {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .segments button.active {
+      border-color: rgba(103, 232, 165, 0.64);
+      background: rgba(103, 232, 165, 0.16);
+      color: #dffcef;
+      box-shadow: inset 0 0 0 1px rgba(103, 232, 165, 0.2);
+    }
+
+    .surface-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .surface-name {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.48);
+      color: #dff9f2;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .random-surface {
+      min-width: 88px;
+      color: #ffe7ba;
+      border-color: rgba(246, 178, 75, 0.38);
+      background: rgba(246, 178, 75, 0.09);
+      cursor: pointer;
+    }
+
+    .toggles {
+      display: grid;
+      gap: 9px;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.035);
+      color: #dcecea;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--surface);
+    }
+
+    .readout {
+      display: grid;
+      gap: 9px;
+      margin-top: 2px;
+    }
+
+    .readout-line {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 10px;
+      align-items: baseline;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(7, 16, 24, 0.45);
+      color: #dcecea;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .readout-line span {
+      color: var(--muted-2);
+      font-weight: 900;
+    }
+
+    .math {
+      color: #f3fffb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .focus {
+      margin-top: 14px;
+      padding: 13px;
+      border: 1px solid rgba(103, 232, 165, 0.24);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(103, 232, 165, 0.09), rgba(95, 168, 255, 0.06));
+    }
+
+    .focus h3 {
+      margin: 0 0 8px;
+      color: #e9fff7;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    .focus p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 720;
+      line-height: 1.64;
+    }
+
+    .reset {
+      width: 100%;
+      margin-top: 12px;
+      color: #dffcef;
+      border-color: rgba(103, 232, 165, 0.38);
+      background: rgba(103, 232, 165, 0.1);
+    }
+
+    @media (max-width: 1180px) {
+      .top,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .formula-chip {
+        min-width: 0;
+        white-space: normal;
+      }
+
+      .stage,
+      #scene {
+        min-height: 640px;
+        height: 640px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        width: min(100vw - 16px, 680px);
+        padding-top: 12px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .stage,
+      #scene {
+        min-height: 520px;
+        height: 520px;
+      }
+
+      .hover-card {
+        left: 12px;
+        right: 12px;
+        bottom: 72px;
+        min-width: 0;
+      }
+
+      .selected-card {
+        left: 12px;
+        right: 12px;
+        top: 104px;
+        max-width: none;
+        min-width: 0;
+      }
+
+      .hint {
+        left: 12px;
+        right: 12px;
+        max-width: none;
+      }
+
+      .readout-line {
+        grid-template-columns: 1fr;
+      }
+
+      .segments,
+      .surface-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div>
+        <h1>二重积分：曲顶柱体</h1>
+        <p class="intro">把曲面 z=f(x,y) 下方的空间看成许多小柱体的总和。随机切换曲面，选择沿 x 轴、沿 y 轴或双向分割，移动鼠标查看对应长条或小柱体的高度、底面积与体积贡献。</p>
+      </div>
+      <div class="formula-chip">∫∫D f(x,y)dA<br />≈ Σ f(xᵢ,yⱼ) ΔA</div>
+    </header>
+
+    <section class="layout" aria-label="二重积分曲顶柱体交互实验">
+      <div class="stage">
+        <div class="stage-head" aria-hidden="true">
+          <span class="legend"><i class="swatch" style="--color: var(--surface)"></i>曲面 z=f(x,y)</span>
+          <span class="legend"><i class="swatch" style="--color: var(--projection)"></i>xOy 平面投影</span>
+          <span class="legend"><i class="swatch" style="--color: var(--volume)"></i>曲顶柱体</span>
+          <span class="legend"><i class="swatch" style="--color: var(--highlight)"></i>鼠标悬停高亮长条</span>
+        </div>
+        <canvas id="scene" aria-label="三维曲面、xOy 平面投影、曲顶柱体和二重积分长条分割"></canvas>
+        <div class="hover-card" aria-live="polite">
+          <strong id="hoverTitle">当前长条</strong>
+          <div id="hoverReadout">移动鼠标到曲顶柱体上查看。</div>
+        </div>
+        <div class="selected-card" id="selectedCard" aria-live="polite">
+          <strong id="selectedTitle">已选中</strong>
+          <div id="selectedReadout">点击一个高亮长条查看信息。</div>
+        </div>
+        <div class="hint">按住画面拖动可旋转空间，滚轮缩放。长条高亮来自鼠标在 xOy 平面投影中的位置。</div>
+      </div>
+
+      <aside class="panel" aria-label="交互控制">
+        <h2>曲面与体积控制</h2>
+        <div class="integral-card">体积 ≈ Σ f(xᵢ,yⱼ)ΔA<br /><span id="totalReadout">V ≈ 23.42</span></div>
+
+        <div class="control-group">
+          <div class="label-row"><span>曲面形状</span><span class="value" id="surfaceName">中央鼓包</span></div>
+          <div class="surface-row">
+            <div class="surface-name" id="surfaceShort">平滑鼓包 + 轻微波纹</div>
+            <button type="button" class="random-surface" id="randomSurface">随机</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="label-row"><span>分割方式</span><span class="value" id="directionText">沿 x 轴</span></div>
+          <div class="segments" id="directionButtons">
+            <button type="button" data-direction="x" class="active">沿 x 轴</button>
+            <button type="button" data-direction="y">沿 y 轴</button>
+            <button type="button" data-direction="xy">x/y 双向</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="label-row"><label for="splitCount">分割数量</label><span class="value" id="splitValue">12</span></div>
+          <input id="splitCount" type="range" min="4" max="24" step="1" value="12" />
+        </div>
+
+        <div class="control-group">
+          <div class="toggles">
+            <label class="toggle">显示曲面 z=f(x,y) <input id="showSurface" type="checkbox" checked /></label>
+            <label class="toggle">显示 xOy 平面投影 <input id="showProjection" type="checkbox" checked /></label>
+            <label class="toggle">显示分割长条 <input id="showStrips" type="checkbox" checked /></label>
+            <label class="toggle">显示空间网格 <input id="showGrid" type="checkbox" checked /></label>
+          </div>
+          <button type="button" class="reset" id="resetView">重置视角</button>
+        </div>
+
+        <div class="control-group">
+          <div class="readout">
+            <div class="readout-line"><span>曲面</span><div class="math" id="surfaceFormula">z = 1.35 + 0.55e⁻⁰·³⁵⁽ˣ²⁺ʸ²⁾ + 0.18sin(1.5x)cos(1.2y)</div></div>
+            <div class="readout-line"><span>投影区域</span><div class="math">D = [-2,2] × [-2,2]</div></div>
+            <div class="readout-line"><span>当前高度</span><div class="math" id="heightReadout">f(xᵢ,yⱼ) = --</div></div>
+            <div class="readout-line"><span>面积元</span><div class="math" id="areaReadout">ΔA = --</div></div>
+            <div class="readout-line"><span>体积项</span><div class="math" id="termReadout">f(xᵢ,yⱼ)ΔA = --</div></div>
+          </div>
+        </div>
+
+        <div class="focus">
+          <h3>观察重点</h3>
+          <p>二重积分可以理解为“底面小面积 × 曲面高度”的总和。分割越细，长条或小柱体的总和越接近曲面下方的真实体积。</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="../vendor/three.min.js"></script>
+  <script>
+    const canvas = document.getElementById('scene');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x0a141d, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x0a141d, 8, 18);
+
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    camera.up.set(0, 0, 1);
+
+    const view = {
+      radius: 8.5,
+      yaw: -46,
+      pitch: 28,
+      target: new THREE.Vector3(0, 0, 0.95)
+    };
+
+    const state = {
+      surfacePreset: 'mound',
+      direction: 'x',
+      splitCount: 12,
+      activeX: -1,
+      activeY: -1,
+      selectedX: -1,
+      selectedY: -1,
+      showSurface: true,
+      showProjection: true,
+      showStrips: true,
+      showGrid: true
+    };
+
+    const domain = {
+      xMin: -2,
+      xMax: 2,
+      yMin: -2,
+      yMax: 2
+    };
+
+    const colors = {
+      axisX: 0x7dd3fc,
+      axisY: 0x67e8a5,
+      axisZ: 0xf6b24b,
+      surface: 0x67e8a5,
+      surfaceWire: 0xb9fff1,
+      projection: 0x3b82f6,
+      volume: 0x22d3ee,
+      highlight: 0xf6b24b,
+      selected: 0xf8d66d,
+      grid: 0x9fb4bd
+    };
+
+    const groups = {
+      axes: new THREE.Group(),
+      labels: new THREE.Group(),
+      surface: new THREE.Group(),
+      projection: new THREE.Group(),
+      volume: new THREE.Group(),
+      strips: new THREE.Group(),
+      selected: new THREE.Group(),
+      highlight: new THREE.Group()
+    };
+
+    Object.values(groups).forEach(group => scene.add(group));
+
+    const ui = {
+      directionButtons: document.getElementById('directionButtons'),
+      directionText: document.getElementById('directionText'),
+      randomSurface: document.getElementById('randomSurface'),
+      surfaceName: document.getElementById('surfaceName'),
+      surfaceShort: document.getElementById('surfaceShort'),
+      surfaceFormula: document.getElementById('surfaceFormula'),
+      splitCount: document.getElementById('splitCount'),
+      splitValue: document.getElementById('splitValue'),
+      showSurface: document.getElementById('showSurface'),
+      showProjection: document.getElementById('showProjection'),
+      showStrips: document.getElementById('showStrips'),
+      showGrid: document.getElementById('showGrid'),
+      resetView: document.getElementById('resetView'),
+      totalReadout: document.getElementById('totalReadout'),
+      hoverTitle: document.getElementById('hoverTitle'),
+      hoverReadout: document.getElementById('hoverReadout'),
+      selectedCard: document.getElementById('selectedCard'),
+      selectedTitle: document.getElementById('selectedTitle'),
+      selectedReadout: document.getElementById('selectedReadout'),
+      heightReadout: document.getElementById('heightReadout'),
+      areaReadout: document.getElementById('areaReadout'),
+      termReadout: document.getElementById('termReadout')
+    };
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const groundHit = new THREE.Vector3();
+
+    const lights = [
+      new THREE.AmbientLight(0xd9fff6, 1.6),
+      new THREE.DirectionalLight(0xffffff, 2.1),
+      new THREE.PointLight(0x67e8a5, 18, 14),
+      new THREE.PointLight(0x3b82f6, 14, 14)
+    ];
+    lights[1].position.set(4.4, -5.2, 7.2);
+    lights[2].position.set(-3.3, 2.8, 3.8);
+    lights[3].position.set(3.6, 3.2, 2.2);
+    lights.forEach(light => scene.add(light));
+
+    const surfacePresets = {
+      mound: {
+        name: '中央鼓包',
+        short: '平滑鼓包 + 轻微波纹',
+        formula: 'z = 1.35 + 0.55e⁻⁰·³⁵⁽ˣ²⁺ʸ²⁾ + 0.18sin(1.5x)cos(1.2y)',
+        sample: (x, y) => 1.35 +
+          0.55 * Math.exp(-0.35 * (x * x + y * y)) +
+          0.18 * Math.sin(1.5 * x) * Math.cos(1.2 * y)
+      },
+      ridge: {
+        name: '山脊曲面',
+        short: '沿 y 方向延展的高脊',
+        formula: 'z = 1.18 + 0.68e⁻⁰·⁸ˣ² + 0.16cos(2.2y)',
+        sample: (x, y) => 1.18 +
+          0.68 * Math.exp(-0.8 * x * x) +
+          0.16 * Math.cos(2.2 * y)
+      },
+      waves: {
+        name: '波浪曲面',
+        short: '两个方向同时起伏',
+        formula: 'z = 1.45 + 0.24sin(1.7x) + 0.22cos(1.5y) + 0.16sin(xy)',
+        sample: (x, y) => 1.45 +
+          0.24 * Math.sin(1.7 * x) +
+          0.22 * Math.cos(1.5 * y) +
+          0.16 * Math.sin(x * y)
+      },
+      saddle: {
+        name: '倾斜鞍面',
+        short: '一边升高，一边下降',
+        formula: 'z = 1.45 + 0.18xy + 0.16x - 0.10y',
+        sample: (x, y) => 1.45 + 0.18 * x * y + 0.16 * x - 0.1 * y
+      },
+      twin: {
+        name: '双峰曲面',
+        short: '两个峰值共同贡献体积',
+        formula: 'z = 1.12 + 0.56e⁻⁽ˣ⁻⁰·⁹⁾²⁻⁰·⁸⁽ʸ⁺⁰·⁴⁾² + 0.46e⁻⁰·⁹⁽ˣ⁺¹·⁰⁾²⁻⁽ʸ⁻⁰·⁸⁾²',
+        sample: (x, y) => 1.12 +
+          0.56 * Math.exp(-((x - 0.9) * (x - 0.9)) - 0.8 * ((y + 0.4) * (y + 0.4))) +
+          0.46 * Math.exp(-0.9 * ((x + 1) * (x + 1)) - ((y - 0.8) * (y - 0.8)))
+      }
+    };
+
+    const surfaceKeys = Object.keys(surfacePresets);
+
+    function zAt(x, y) {
+      return Math.max(0.18, surfacePresets[state.surfacePreset].sample(x, y));
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function clearGroup(group) {
+      group.traverse(object => {
+        if (object.geometry) object.geometry.dispose();
+        if (object.material) {
+          if (Array.isArray(object.material)) object.material.forEach(material => material.dispose());
+          else object.material.dispose();
+        }
+        if (object.material && object.material.map) object.material.map.dispose();
+      });
+      group.clear();
+    }
+
+    function makeTextSprite(text, color = '#edf8f6') {
+      const size = 128;
+      const textCanvas = document.createElement('canvas');
+      textCanvas.width = size;
+      textCanvas.height = size;
+      const ctx = textCanvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      ctx.font = '900 54px Inter, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 10;
+      ctx.fillText(text, size / 2, size / 2);
+      const texture = new THREE.CanvasTexture(textCanvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(0.42, 0.42, 0.42);
+      return sprite;
+    }
+
+    function drawAxis(direction, color, label, position) {
+      const arrow = new THREE.ArrowHelper(direction.clone().normalize(), new THREE.Vector3(0, 0, 0), 2.85, color, 0.2, 0.1);
+      groups.axes.add(arrow);
+      const sprite = makeTextSprite(label, `#${color.toString(16).padStart(6, '0')}`);
+      sprite.position.copy(position);
+      groups.labels.add(sprite);
+    }
+
+    function buildAxes() {
+      clearGroup(groups.axes);
+      clearGroup(groups.labels);
+
+      if (state.showGrid) {
+        const gridMaterial = new THREE.LineBasicMaterial({ color: colors.grid, transparent: true, opacity: 0.16 });
+        const vertices = [];
+        const min = -2.4;
+        const max = 2.4;
+        const zMax = 2.7;
+        for (let i = min; i <= max + 0.001; i += 0.4) {
+          vertices.push(min, i, 0, max, i, 0, i, min, 0, i, max, 0);
+        }
+        for (let i = 0; i <= zMax + 0.001; i += 0.45) {
+          vertices.push(min, min, i, max, min, i, min, max, i, max, max, i);
+          vertices.push(min, min, i, min, max, i, max, min, i, max, max, i);
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        groups.axes.add(new THREE.LineSegments(geometry, gridMaterial));
+      }
+
+      drawAxis(new THREE.Vector3(1, 0, 0), colors.axisX, 'x', new THREE.Vector3(3.05, 0, 0));
+      drawAxis(new THREE.Vector3(0, 1, 0), colors.axisY, 'y', new THREE.Vector3(0, 3.05, 0));
+      drawAxis(new THREE.Vector3(0, 0, 1), colors.axisZ, 'z', new THREE.Vector3(0, 0, 3.1));
+    }
+
+    function makeSurfaceGeometry(x0, x1, y0, y1, nx, ny, topOnly = true) {
+      const positions = [];
+      const colorsArray = [];
+      const indices = [];
+
+      for (let j = 0; j <= ny; j += 1) {
+        const y = y0 + (j / ny) * (y1 - y0);
+        for (let i = 0; i <= nx; i += 1) {
+          const x = x0 + (i / nx) * (x1 - x0);
+          const z = topOnly ? zAt(x, y) : 0;
+          positions.push(x, y, z);
+          const tint = (zAt(x, y) - 1.15) / 0.95;
+          const c = new THREE.Color().lerpColors(new THREE.Color(0x2dd4bf), new THREE.Color(0xd9fff6), clamp(tint, 0, 1) * 0.52);
+          colorsArray.push(c.r, c.g, c.b);
+        }
+      }
+
+      for (let j = 0; j < ny; j += 1) {
+        for (let i = 0; i < nx; i += 1) {
+          const a = j * (nx + 1) + i;
+          const b = a + 1;
+          const c = a + nx + 1;
+          const d = c + 1;
+          indices.push(a, c, b, b, c, d);
+        }
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colorsArray, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function addSurface() {
+      clearGroup(groups.surface);
+      if (!state.showSurface) return;
+
+      const geometry = makeSurfaceGeometry(domain.xMin, domain.xMax, domain.yMin, domain.yMax, 62, 62);
+      const material = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide,
+        roughness: 0.42,
+        metalness: 0.02,
+        transparent: true,
+        opacity: 0.54,
+        depthWrite: false
+      });
+      groups.surface.add(new THREE.Mesh(geometry, material));
+
+      const wire = new THREE.WireframeGeometry(geometry);
+      groups.surface.add(new THREE.LineSegments(wire, new THREE.LineBasicMaterial({
+        color: colors.surfaceWire,
+        transparent: true,
+        opacity: 0.2
+      })));
+    }
+
+    function addProjection() {
+      clearGroup(groups.projection);
+      if (!state.showProjection) return;
+
+      const geometry = makeSurfaceGeometry(domain.xMin, domain.xMax, domain.yMin, domain.yMax, 2, 2, false);
+      const material = new THREE.MeshBasicMaterial({
+        color: colors.projection,
+        transparent: true,
+        opacity: 0.24,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      groups.projection.add(new THREE.Mesh(geometry, material));
+
+      const borderVertices = [
+        domain.xMin, domain.yMin, 0.012, domain.xMax, domain.yMin, 0.012,
+        domain.xMax, domain.yMin, 0.012, domain.xMax, domain.yMax, 0.012,
+        domain.xMax, domain.yMax, 0.012, domain.xMin, domain.yMax, 0.012,
+        domain.xMin, domain.yMax, 0.012, domain.xMin, domain.yMin, 0.012
+      ];
+      const borderGeometry = new THREE.BufferGeometry();
+      borderGeometry.setAttribute('position', new THREE.Float32BufferAttribute(borderVertices, 3));
+      groups.projection.add(new THREE.LineSegments(borderGeometry, new THREE.LineBasicMaterial({
+        color: colors.projection,
+        transparent: true,
+        opacity: 0.85
+      })));
+    }
+
+    function addBoundaryWall(edge, constant) {
+      const steps = 42;
+      const positions = [];
+      const indices = [];
+      for (let i = 0; i <= steps; i += 1) {
+        const t = i / steps;
+        const x = edge === 'x' ? constant : domain.xMin + t * (domain.xMax - domain.xMin);
+        const y = edge === 'y' ? constant : domain.yMin + t * (domain.yMax - domain.yMin);
+        positions.push(x, y, 0, x, y, zAt(x, y));
+      }
+      for (let i = 0; i < steps; i += 1) {
+        const a = i * 2;
+        const b = a + 1;
+        const c = a + 2;
+        const d = a + 3;
+        indices.push(a, c, b, b, c, d);
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+        color: colors.volume,
+        transparent: true,
+        opacity: 0.22,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      }));
+      groups.volume.add(mesh);
+    }
+
+    function addVolumeWalls() {
+      clearGroup(groups.volume);
+      addBoundaryWall('x', domain.xMin);
+      addBoundaryWall('x', domain.xMax);
+      addBoundaryWall('y', domain.yMin);
+      addBoundaryWall('y', domain.yMax);
+    }
+
+    function addCuttingPlane(direction, constant) {
+      const geometry = direction === 'x'
+        ? makeWallGeometry('x', constant, domain.yMin, domain.yMax)
+        : makeWallGeometry('y', constant, domain.xMin, domain.xMax);
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+        color: colors.volume,
+        transparent: true,
+        opacity: 0.16,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      }));
+      mesh.renderOrder = 12;
+      groups.strips.add(mesh);
+    }
+
+    function addStripProjection(index, direction) {
+      const count = state.splitCount;
+      const dx = (domain.xMax - domain.xMin) / count;
+      const dy = (domain.yMax - domain.yMin) / count;
+      const x0 = direction === 'x' ? domain.xMin + index * dx : domain.xMin;
+      const x1 = direction === 'x' ? x0 + dx : domain.xMax;
+      const y0 = direction === 'y' ? domain.yMin + index * dy : domain.yMin;
+      const y1 = direction === 'y' ? y0 + dy : domain.yMax;
+      const geometry = makeSurfaceGeometry(x0, x1, y0, y1, 1, 1, false);
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+        color: colors.projection,
+        transparent: true,
+        opacity: 0.08,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      }));
+      mesh.position.z = 0.012;
+      groups.strips.add(mesh);
+    }
+
+    function addStrips() {
+      clearGroup(groups.strips);
+      if (!state.showStrips) return;
+
+      const count = state.splitCount;
+      const directions = state.direction === 'xy' ? ['x', 'y'] : [state.direction];
+      directions.forEach(direction => {
+        for (let i = 1; i < count; i += 1) {
+          const constant = direction === 'x'
+            ? domain.xMin + i * (domain.xMax - domain.xMin) / count
+            : domain.yMin + i * (domain.yMax - domain.yMin) / count;
+          addCuttingPlane(direction, constant);
+        }
+
+        for (let i = 0; i < count; i += 1) addStripProjection(i, direction);
+      });
+    }
+
+    function makeWallGeometry(direction, constant, from, to) {
+      const steps = 34;
+      const positions = [];
+      const indices = [];
+      for (let i = 0; i <= steps; i += 1) {
+        const t = i / steps;
+        const x = direction === 'x' ? constant : from + t * (to - from);
+        const y = direction === 'y' ? constant : from + t * (to - from);
+        positions.push(x, y, 0.02, x, y, zAt(x, y));
+      }
+      for (let i = 0; i < steps; i += 1) {
+        const a = i * 2;
+        const b = a + 1;
+        const c = a + 2;
+        const d = a + 3;
+        indices.push(a, c, b, b, c, d);
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function drawRegionHighlight(group, bounds, color, topOpacity, groundOpacity, wallOpacity, renderOrder) {
+      const { x0, x1, y0, y1 } = bounds;
+      const narrowX = x1 - x0 < domain.xMax - domain.xMin;
+      const narrowY = y1 - y0 < domain.yMax - domain.yMin;
+
+      const topGeometry = makeSurfaceGeometry(x0, x1, y0, y1, narrowX ? 3 : 44, narrowY ? 3 : 44);
+      const highlightMaterial = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: topOpacity,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const topMesh = new THREE.Mesh(topGeometry, highlightMaterial);
+      topMesh.renderOrder = renderOrder + 2;
+      group.add(topMesh);
+
+      const groundGeometry = makeSurfaceGeometry(x0, x1, y0, y1, 1, 1, false);
+      const groundMesh = new THREE.Mesh(groundGeometry, new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: groundOpacity,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      }));
+      groundMesh.position.z = 0.018;
+      group.add(groundMesh);
+
+      const wallMaterial = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: wallOpacity,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+
+      [
+        makeWallGeometry('x', x0, y0, y1),
+        makeWallGeometry('x', x1, y0, y1),
+        makeWallGeometry('y', y0, x0, x1),
+        makeWallGeometry('y', y1, x0, x1)
+      ].forEach(geometry => {
+        const mesh = new THREE.Mesh(geometry, wallMaterial.clone());
+        mesh.renderOrder = renderOrder;
+        group.add(mesh);
+      });
+    }
+
+    function addHighlight() {
+      clearGroup(groups.highlight);
+      const bounds = activeBounds();
+      if (!bounds) return;
+      drawRegionHighlight(groups.highlight, bounds, colors.highlight, 0.46, 0.2, 0.32, 28);
+    }
+
+    function addSelectedHighlight() {
+      clearGroup(groups.selected);
+      const bounds = selectedBounds();
+      if (!bounds) return;
+      drawRegionHighlight(groups.selected, bounds, colors.selected, 0.34, 0.18, 0.28, 24);
+    }
+
+    function boundsForIndices(xIndex, yIndex) {
+      if (state.direction === 'x' && xIndex < 0) return null;
+      if (state.direction === 'y' && yIndex < 0) return null;
+      if (state.direction === 'xy' && (xIndex < 0 || yIndex < 0)) return null;
+
+      const count = state.splitCount;
+      const dx = (domain.xMax - domain.xMin) / count;
+      const dy = (domain.yMax - domain.yMin) / count;
+      const x0 = state.direction === 'y' ? domain.xMin : domain.xMin + xIndex * dx;
+      const x1 = state.direction === 'y' ? domain.xMax : x0 + dx;
+      const y0 = state.direction === 'x' ? domain.yMin : domain.yMin + yIndex * dy;
+      const y1 = state.direction === 'x' ? domain.yMax : y0 + dy;
+      return { x0, x1, y0, y1, area: (x1 - x0) * (y1 - y0) };
+    }
+
+    function activeBounds() {
+      return boundsForIndices(state.activeX, state.activeY);
+    }
+
+    function selectedBounds() {
+      return boundsForIndices(state.selectedX, state.selectedY);
+    }
+
+    function midpointForActive() {
+      const bounds = activeBounds();
+      if (!bounds) return null;
+      return {
+        x: (bounds.x0 + bounds.x1) / 2,
+        y: (bounds.y0 + bounds.y1) / 2,
+        area: bounds.area
+      };
+    }
+
+    function midpointForSelected() {
+      const bounds = selectedBounds();
+      if (!bounds) return null;
+      return {
+        x: (bounds.x0 + bounds.x1) / 2,
+        y: (bounds.y0 + bounds.y1) / 2,
+        area: bounds.area
+      };
+    }
+
+    function approximateVolume() {
+      let sum = 0;
+      const nx = 42;
+      const ny = 42;
+      const dx = (domain.xMax - domain.xMin) / nx;
+      const dy = (domain.yMax - domain.yMin) / ny;
+      for (let ix = 0; ix < nx; ix += 1) {
+        for (let iy = 0; iy < ny; iy += 1) {
+          const x = domain.xMin + (ix + 0.5) * dx;
+          const y = domain.yMin + (iy + 0.5) * dy;
+          sum += zAt(x, y) * dx * dy;
+        }
+      }
+      return sum;
+    }
+
+    function updateReadout() {
+      ui.directionText.textContent = state.direction === 'x'
+        ? '沿 x 轴'
+        : state.direction === 'y'
+          ? '沿 y 轴'
+          : 'x/y 双向';
+      ui.surfaceName.textContent = surfacePresets[state.surfacePreset].name;
+      ui.surfaceShort.textContent = surfacePresets[state.surfacePreset].short;
+      ui.surfaceFormula.textContent = surfacePresets[state.surfacePreset].formula;
+      ui.splitValue.textContent = String(state.splitCount);
+      ui.totalReadout.textContent = `V ≈ ${approximateVolume().toFixed(2)}`;
+
+      const mid = midpointForActive();
+      if (!mid) {
+        ui.hoverTitle.textContent = state.direction === 'xy' ? '当前小柱体' : '当前长条';
+        ui.hoverReadout.textContent = '移动鼠标到曲顶柱体上查看。';
+        ui.heightReadout.textContent = 'f(xᵢ,yⱼ) = --';
+        ui.areaReadout.textContent = 'ΔA = --';
+        ui.termReadout.textContent = 'f(xᵢ,yⱼ)ΔA = --';
+        updateSelectedReadout();
+        return;
+      }
+
+      const height = zAt(mid.x, mid.y);
+      const term = height * mid.area;
+      const title = state.direction === 'x'
+        ? `x 向长条 #${state.activeX + 1}`
+        : state.direction === 'y'
+          ? `y 向长条 #${state.activeY + 1}`
+          : `小柱体 (${state.activeX + 1}, ${state.activeY + 1})`;
+      ui.hoverTitle.textContent = title;
+      ui.hoverReadout.innerHTML = `(xᵢ,yⱼ)=(${mid.x.toFixed(2)}, ${mid.y.toFixed(2)})<br />高度=${height.toFixed(2)}<br />面积 ΔA=${mid.area.toFixed(2)}`;
+      ui.heightReadout.textContent = `f(${mid.x.toFixed(2)}, ${mid.y.toFixed(2)}) = ${height.toFixed(2)}`;
+      ui.areaReadout.textContent = `ΔA = ${mid.area.toFixed(2)}`;
+      ui.termReadout.textContent = `f(xᵢ,yⱼ)ΔA ≈ ${term.toFixed(2)}`;
+      updateSelectedReadout();
+    }
+
+    function updateSelectedReadout() {
+      const mid = midpointForSelected();
+      if (!mid) {
+        ui.selectedCard.classList.remove('visible');
+        ui.selectedTitle.textContent = '已选中';
+        ui.selectedReadout.textContent = '点击一个高亮长条查看信息。';
+        return;
+      }
+
+      const height = zAt(mid.x, mid.y);
+      const term = height * mid.area;
+      const title = state.direction === 'x'
+        ? `已选中：x 向长条 #${state.selectedX + 1}`
+        : state.direction === 'y'
+          ? `已选中：y 向长条 #${state.selectedY + 1}`
+          : `已选中：小柱体 (${state.selectedX + 1}, ${state.selectedY + 1})`;
+      ui.selectedTitle.textContent = title;
+      ui.selectedReadout.innerHTML = `底面积 ΔA=${mid.area.toFixed(2)}<br />z=f(xᵢ,yⱼ)=${height.toFixed(2)}<br />(xᵢ,yⱼ)=(${mid.x.toFixed(2)}, ${mid.y.toFixed(2)})<br />体积项≈${term.toFixed(2)}`;
+      ui.selectedCard.classList.add('visible');
+    }
+
+    function rebuild() {
+      buildAxes();
+      addSurface();
+      addProjection();
+      addVolumeWalls();
+      addStrips();
+      addSelectedHighlight();
+      addHighlight();
+      updateReadout();
+    }
+
+    function setCameraFromView() {
+      const yaw = view.yaw * Math.PI / 180;
+      const pitch = view.pitch * Math.PI / 180;
+      const x = view.radius * Math.cos(pitch) * Math.cos(yaw);
+      const y = view.radius * Math.cos(pitch) * Math.sin(yaw);
+      const z = view.radius * Math.sin(pitch);
+      camera.position.set(x, y, z).add(view.target);
+      camera.lookAt(view.target);
+    }
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.floor(rect.width));
+      const height = Math.max(1, Math.floor(rect.height));
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+
+    function resetView() {
+      view.radius = 8.5;
+      view.yaw = -46;
+      view.pitch = 28;
+      setCameraFromView();
+    }
+
+    function updateHoverFromPointer(event) {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.ray.intersectPlane(groundPlane, groundHit);
+      if (!hit) return clearActiveSelection();
+      const inDomain =
+        groundHit.x >= domain.xMin &&
+        groundHit.x <= domain.xMax &&
+        groundHit.y >= domain.yMin &&
+        groundHit.y <= domain.yMax;
+      if (!inDomain) return clearActiveSelection();
+
+      const xIndex = clamp(Math.floor(((groundHit.x - domain.xMin) / (domain.xMax - domain.xMin)) * state.splitCount), 0, state.splitCount - 1);
+      const yIndex = clamp(Math.floor(((groundHit.y - domain.yMin) / (domain.yMax - domain.yMin)) * state.splitCount), 0, state.splitCount - 1);
+      if (state.direction === 'x') setActiveSelection(xIndex, -1);
+      else if (state.direction === 'y') setActiveSelection(-1, yIndex);
+      else setActiveSelection(xIndex, yIndex);
+    }
+
+    function clearActiveSelection() {
+      setActiveSelection(-1, -1);
+    }
+
+    function setActiveSelection(xIndex, yIndex) {
+      if (state.activeX === xIndex && state.activeY === yIndex) return;
+      state.activeX = xIndex;
+      state.activeY = yIndex;
+      addHighlight();
+      updateReadout();
+    }
+
+    function hasActiveSelection() {
+      return !!activeBounds();
+    }
+
+    function clearSelectedSelection() {
+      if (state.selectedX === -1 && state.selectedY === -1) return;
+      state.selectedX = -1;
+      state.selectedY = -1;
+      addSelectedHighlight();
+      updateSelectedReadout();
+    }
+
+    function commitSelectionFromHover() {
+      if (!hasActiveSelection()) {
+        clearSelectedSelection();
+        return;
+      }
+
+      state.selectedX = state.activeX;
+      state.selectedY = state.activeY;
+      addSelectedHighlight();
+      updateSelectedReadout();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      setCameraFromView();
+      renderer.render(scene, camera);
+    }
+
+    function attachControls() {
+      let dragging = false;
+      let lastX = 0;
+      let lastY = 0;
+      let downX = 0;
+      let downY = 0;
+      let didDrag = false;
+
+      canvas.addEventListener('pointerdown', event => {
+        dragging = true;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        downX = event.clientX;
+        downY = event.clientY;
+        didDrag = false;
+        canvas.classList.add('dragging');
+        canvas.setPointerCapture(event.pointerId);
+      });
+
+      canvas.addEventListener('pointermove', event => {
+        if (dragging) {
+          const dx = event.clientX - lastX;
+          const dy = event.clientY - lastY;
+          const totalDx = event.clientX - downX;
+          const totalDy = event.clientY - downY;
+          didDrag = didDrag || Math.hypot(totalDx, totalDy) > 5;
+          lastX = event.clientX;
+          lastY = event.clientY;
+          view.yaw = clamp(view.yaw + dx * 0.45, -180, 180);
+          view.pitch = clamp(view.pitch - dy * 0.35, -12, 82);
+        }
+        updateHoverFromPointer(event);
+      });
+
+      canvas.addEventListener('pointerup', event => {
+        updateHoverFromPointer(event);
+        if (!didDrag) commitSelectionFromHover();
+        dragging = false;
+        canvas.classList.remove('dragging');
+        canvas.releasePointerCapture(event.pointerId);
+      });
+
+      canvas.addEventListener('pointercancel', () => {
+        dragging = false;
+        didDrag = false;
+        canvas.classList.remove('dragging');
+      });
+
+      canvas.addEventListener('pointerleave', () => {
+        if (!dragging) clearActiveSelection();
+      });
+
+      canvas.addEventListener('wheel', event => {
+        event.preventDefault();
+        view.radius = clamp(view.radius + event.deltaY * 0.004, 5.2, 12.5);
+      }, { passive: false });
+
+      canvas.addEventListener('dblclick', resetView);
+      ui.resetView.addEventListener('click', resetView);
+
+      ui.directionButtons.addEventListener('click', event => {
+        const button = event.target.closest('button[data-direction]');
+        if (!button) return;
+        state.direction = button.dataset.direction;
+        state.activeX = -1;
+        state.activeY = -1;
+        state.selectedX = -1;
+        state.selectedY = -1;
+        ui.directionButtons.querySelectorAll('button').forEach(item => {
+          item.classList.toggle('active', item.dataset.direction === state.direction);
+        });
+        addStrips();
+        addSelectedHighlight();
+        addHighlight();
+        updateReadout();
+      });
+
+      ui.randomSurface.addEventListener('click', () => {
+        const nextKeys = surfaceKeys.filter(key => key !== state.surfacePreset);
+        state.surfacePreset = nextKeys[Math.floor(Math.random() * nextKeys.length)];
+        state.activeX = -1;
+        state.activeY = -1;
+        state.selectedX = -1;
+        state.selectedY = -1;
+        addSurface();
+        addVolumeWalls();
+        addStrips();
+        addSelectedHighlight();
+        addHighlight();
+        updateReadout();
+      });
+
+      ui.splitCount.addEventListener('input', event => {
+        state.splitCount = Number(event.target.value);
+        state.activeX = -1;
+        state.activeY = -1;
+        state.selectedX = -1;
+        state.selectedY = -1;
+        addStrips();
+        addSelectedHighlight();
+        addHighlight();
+        updateReadout();
+      });
+
+      ui.showSurface.addEventListener('change', event => {
+        state.showSurface = event.target.checked;
+        addSurface();
+      });
+
+      ui.showProjection.addEventListener('change', event => {
+        state.showProjection = event.target.checked;
+        addProjection();
+      });
+
+      ui.showStrips.addEventListener('change', event => {
+        state.showStrips = event.target.checked;
+        addStrips();
+      });
+
+      ui.showGrid.addEventListener('change', event => {
+        state.showGrid = event.target.checked;
+        buildAxes();
+      });
+
+      window.addEventListener('resize', resize);
+    }
+
+    rebuild();
+    resetView();
+    resize();
+    attachControls();
+    animate();
+  </script>
+</body>
+</html>
