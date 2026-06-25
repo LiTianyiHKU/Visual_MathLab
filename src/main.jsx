@@ -344,14 +344,6 @@ function MathStage({ mode, theme }) {
       }
     };
 
-    const glow = (x, y, radius, color, alpha) => {
-      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      gradient.addColorStop(0, color.replace('1)', `${alpha})`));
-      gradient.addColorStop(1, color.replace('1)', '0)'));
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
-    };
-
     const drawVector = (x1, y1, x2, y2, color) => {
       const angle = Math.atan2(y2 - y1, x2 - x1);
       ctx.strokeStyle = color;
@@ -394,11 +386,8 @@ function MathStage({ mode, theme }) {
     const drawFrame = () => {
       frame += 1;
       const p = pointerRef.current;
-      const px = p.x * width;
-      const py = p.y * height;
       ctx.clearRect(0, 0, width, height);
       drawGrid();
-      glow(px, py, 210, `rgba(${theme.rgb}, 1)`, p.active ? 0.18 : 0.1);
 
       if (mode === 'linear') {
         const originX = width * 0.5;
@@ -519,7 +508,7 @@ function MathStage({ mode, theme }) {
       canvas.removeEventListener('pointermove', setPointer);
       canvas.removeEventListener('pointerleave', leavePointer);
     };
-  }, [mode, theme.color, theme.rgb]);
+  }, [mode, theme.color]);
 
   return (
     <div className="math-stage">
