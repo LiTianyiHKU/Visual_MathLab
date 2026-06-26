@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && cp dist/app.html dist/index.html && cp -R '线性代数' '概率论' '微积分' 'vendor' dist/ && cp shared-demo-theme.css dist/ && vite build --config vite.standalone.config.js",
+    "build": "vite build && cp dist/app.html dist/index.html && cp -R '线性代数' '概率论' '微积分' 'vendor' dist/ && cp shared-demo-theme.css dist/ && vite build --config vite.standalone.config.js && chmod -R a+rX dist",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

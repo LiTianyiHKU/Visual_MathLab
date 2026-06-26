@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import {
   ArrowLeft,
   ArrowUpRight,
+  AudioWaveform,
   CircleDot,
   Compass,
   Dices,
@@ -157,6 +158,15 @@ const demos = [
     summary: '选择或绘制周期函数，拖动项数 N，观察傅立叶部分和与系数如何逼近原函数。',
     icon: Sigma,
     formula: 'S_N(x)'
+  },
+  {
+    id: 'fourier-sound-mixer',
+    title: '傅立叶声音混合器',
+    subject: 'calculus',
+    href: '微积分/傅立叶声音调色台.html',
+    summary: '像声音混合器一样试听低频骨架、中频主体和高频细节，观察混合声音怎样由频率成分相加而成。',
+    icon: AudioWaveform,
+    formula: '原声=低+中+高'
   },
   {
     id: 'double-integral-volume',
@@ -585,7 +595,7 @@ function LessonShell({ demo, theme }) {
         </a>
       </div>
       <div className="lesson-frame-wrap">
-        <iframe title={demo.title} src={encodedHref(demo.href)} />
+        <iframe title={demo.title} src={encodedHref(demo.href)} allow="autoplay" />
       </div>
       <div className="lesson-glow" style={{ background: `radial-gradient(circle, rgba(${theme.rgb}, 0.18), transparent 62%)` }} />
     </section>

@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>傅立叶声音混合器</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050d14;
+      --panel: rgba(8, 19, 29, 0.92);
+      --panel-2: rgba(12, 30, 43, 0.86);
+      --ink: #eef8fb;
+      --muted: #9fb3c0;
+      --line: rgba(146, 197, 220, 0.18);
+      --line-strong: rgba(146, 197, 220, 0.34);
+      --original: #dff8ff;
+      --low: #9cf180;
+      --mid: #ffc247;
+      --high: #ff82ce;
+      --cyan: #67d7ef;
+      --danger: #ff9b8f;
+      --radius: 8px;
+      --shadow: 0 28px 72px rgba(0, 0, 0, 0.34);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        linear-gradient(rgba(103, 215, 239, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(103, 215, 239, 0.035) 1px, transparent 1px),
+        linear-gradient(135deg, #040a10 0%, #07111b 50%, #081622 100%);
+      background-size: 44px 44px, 44px 44px, auto;
+      color: var(--ink);
+    }
+
+    button {
+      border: 0;
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .app {
+      width: min(1500px, calc(100vw - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .nav-link,
+    .tool-button,
+    .mode-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--ink);
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+    }
+
+    .nav-link {
+      padding: 0 13px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .nav-link:hover,
+    .tool-button:hover,
+    .mode-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(103, 215, 239, 0.58);
+      background: rgba(103, 215, 239, 0.1);
+    }
+
+    h1 {
+      margin: 0;
+      text-align: center;
+      font-size: clamp(29px, 3.2vw, 48px);
+      line-height: 1.05;
+      letter-spacing: 0;
+      text-shadow: 0 14px 42px rgba(103, 215, 239, 0.18);
+    }
+
+    .status {
+      justify-self: end;
+      min-width: 190px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 760;
+      text-align: right;
+    }
+
+    .status strong {
+      display: block;
+      color: var(--ink);
+      font-size: 15px;
+      margin-bottom: 3px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(640px, 1.45fr) minmax(360px, 0.55fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel,
+    .wave-stage,
+    .formula-band {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .wave-stage {
+      min-width: 0;
+    }
+
+    .wave-header,
+    .spectrum-header,
+    .teacher-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(3, 10, 16, 0.42);
+    }
+
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 880;
+      letter-spacing: 0.04em;
+    }
+
+    .section-title {
+      margin: 3px 0 0;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .wave-canvas-wrap {
+      position: relative;
+      min-height: 560px;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0)),
+        #06111b;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+    }
+
+    #waveCanvas {
+      height: min(60vh, 620px);
+      min-height: 540px;
+    }
+
+    .lane-labels {
+      position: absolute;
+      inset: 0 auto 0 0;
+      display: grid;
+      grid-template-rows: repeat(4, 1fr);
+      width: 166px;
+      pointer-events: none;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(90deg, rgba(3, 10, 16, 0.86), rgba(3, 10, 16, 0.2));
+    }
+
+    .lane-label {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      padding-left: 22px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 920;
+      transition: opacity 180ms ease, color 180ms ease;
+    }
+
+    .lane-label:last-child {
+      border-bottom: 0;
+    }
+
+    .lane-label.is-muted {
+      opacity: 0.42;
+    }
+
+    .lane-label span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 740;
+    }
+
+    .playhead {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 166px;
+      width: 2px;
+      background: linear-gradient(to bottom, transparent, rgba(103, 215, 239, 0.95), transparent);
+      box-shadow: 0 0 22px rgba(103, 215, 239, 0.75);
+      pointer-events: none;
+      transform: translateX(var(--playhead, 0px));
+    }
+
+    .meter-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+      background: rgba(3, 10, 16, 0.36);
+    }
+
+    .meter {
+      min-width: 0;
+    }
+
+    .meter-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      margin-bottom: 8px;
+    }
+
+    .meter-track {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .meter-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--cyan);
+      transition: width 160ms ease;
+    }
+
+    .spectrum {
+      border-top: 1px solid var(--line);
+      background: rgba(3, 10, 16, 0.22);
+    }
+
+    #spectrumCanvas {
+      height: clamp(320px, 42vh, 430px);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0)),
+        #06111b;
+    }
+
+    .teacher-panel {
+      min-width: 0;
+    }
+
+    .control-stack {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+    }
+
+    .play-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    .tool-button.primary {
+      min-height: 54px;
+      border-color: rgba(103, 215, 239, 0.52);
+      background: linear-gradient(135deg, rgba(103, 215, 239, 0.22), rgba(156, 241, 128, 0.14));
+      color: #f6feff;
+      font-size: 18px;
+      font-weight: 920;
+    }
+
+    .tool-button.secondary {
+      min-width: 68px;
+      color: var(--muted);
+      font-weight: 820;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .mode-button {
+      min-height: 48px;
+      padding: 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 860;
+      text-align: center;
+    }
+
+    .mode-button.is-active {
+      color: #06111b;
+      border-color: rgba(255, 255, 255, 0.4);
+      background: var(--active-color, var(--cyan));
+      box-shadow: 0 12px 34px rgba(103, 215, 239, 0.16);
+    }
+
+    .component-list {
+      display: grid;
+      gap: 9px;
+      padding: 16px;
+      border-top: 1px solid var(--line);
+      background: rgba(3, 10, 16, 0.26);
+    }
+
+    .component-chip {
+      display: grid;
+      grid-template-columns: 12px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 780;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--dot-color);
+      box-shadow: 0 0 16px var(--dot-color);
+    }
+
+    .component-chip strong {
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .formula-band {
+      margin-top: 18px;
+      padding: 18px;
+      background:
+        linear-gradient(90deg, rgba(156, 241, 128, 0.1), rgba(255, 194, 71, 0.08), rgba(255, 130, 206, 0.09)),
+        var(--panel);
+    }
+
+    .formula {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: clamp(22px, 2.7vw, 38px);
+      font-weight: 950;
+      letter-spacing: 0;
+      line-height: 1.25;
+      text-align: center;
+    }
+
+    .formula small {
+      color: var(--muted);
+      font-size: 0.42em;
+      font-weight: 780;
+    }
+
+    .token {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .token.is-muted {
+      opacity: 0.38;
+    }
+
+    .token-original {
+      color: var(--original);
+    }
+
+    .token-low {
+      color: var(--low);
+    }
+
+    .token-mid {
+      color: var(--mid);
+    }
+
+    .token-high {
+      color: var(--high);
+    }
+
+    @media (max-width: 1060px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .teacher-panel {
+        order: 2;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        width: min(100vw - 16px, 1500px);
+        padding-top: 12px;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      h1 {
+        text-align: left;
+        font-size: 30px;
+      }
+
+      .status {
+        justify-self: stretch;
+        min-width: 0;
+        text-align: left;
+      }
+
+      .wave-header,
+      .spectrum-header,
+      .teacher-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .hint {
+        text-align: left;
+      }
+
+      .wave-canvas-wrap {
+        min-height: 480px;
+      }
+
+      #waveCanvas {
+        min-height: 480px;
+        height: 480px;
+      }
+
+      .lane-labels {
+        width: 122px;
+      }
+
+      .lane-label {
+        padding-left: 12px;
+        font-size: 13px;
+      }
+
+      .lane-label span {
+        font-size: 11px;
+      }
+
+      .playhead {
+        left: 122px;
+      }
+
+      #spectrumCanvas {
+        height: 300px;
+      }
+
+      .meter-row,
+      .mode-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .formula {
+        justify-content: flex-start;
+        text-align: left;
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="nav-link" href="../app.html#/subject/calculus" target="_top" aria-label="返回微积分">← 返回微积分</a>
+      <h1>傅立叶声音混合器</h1>
+      <div class="status" aria-live="polite">
+        <strong id="statusMode">待播放</strong>
+        <span id="statusDetail">点击播放后，浏览器会实时合成声音</span>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="wave-stage" aria-label="波形与频谱">
+        <div class="wave-header">
+          <div>
+            <div class="eyebrow">WAVE MIXER</div>
+            <h2 class="section-title">四条波形轨道</h2>
+          </div>
+          <div class="hint" id="waveHint">原声由三个温和频率同时相加</div>
+        </div>
+        <div class="wave-canvas-wrap">
+          <canvas id="waveCanvas" aria-label="原声、低频、中频和高频波形"></canvas>
+          <div class="lane-labels" aria-hidden="true">
+            <div class="lane-label" data-lane-label="original">原声<span>混合结果</span></div>
+            <div class="lane-label" data-lane-label="low">低频骨架<span>150 Hz</span></div>
+            <div class="lane-label" data-lane-label="mid">中频主体<span>300 Hz</span></div>
+            <div class="lane-label" data-lane-label="high">高频细节<span>750 Hz</span></div>
+          </div>
+          <div class="playhead" id="playhead" aria-hidden="true"></div>
+        </div>
+        <div class="meter-row" aria-label="当前频段能量">
+          <div class="meter">
+            <div class="meter-top"><span>低频骨架</span><strong id="lowMeterText">0%</strong></div>
+            <div class="meter-track"><div class="meter-fill" id="lowMeter" style="background: var(--low)"></div></div>
+          </div>
+          <div class="meter">
+            <div class="meter-top"><span>中频主体</span><strong id="midMeterText">0%</strong></div>
+            <div class="meter-track"><div class="meter-fill" id="midMeter" style="background: var(--mid)"></div></div>
+          </div>
+          <div class="meter">
+            <div class="meter-top"><span>高频细节</span><strong id="highMeterText">0%</strong></div>
+            <div class="meter-track"><div class="meter-fill" id="highMeter" style="background: var(--high)"></div></div>
+          </div>
+        </div>
+
+      </section>
+
+      <aside class="panel teacher-panel" aria-label="播放控制与频谱峰">
+        <div class="teacher-header">
+          <div>
+            <div class="eyebrow">SOUND MIXER</div>
+            <h2 class="section-title">播放控制</h2>
+          </div>
+          <div class="hint">切换模式时，频谱峰同步高亮</div>
+        </div>
+
+        <div class="control-stack">
+          <div class="play-row">
+            <button class="tool-button primary" id="playButton" type="button" onclick="void window.startMixerPlayback()">▶ 播放</button>
+            <button class="tool-button secondary" id="resetButton" type="button" onclick="window.resetMixerDemo()">重置</button>
+          </div>
+
+          <div class="mode-grid" role="group" aria-label="播放模式">
+            <button class="mode-button is-active" data-mode="original" type="button" style="--active-color: var(--original)">原声</button>
+            <button class="mode-button" data-mode="low" type="button" style="--active-color: var(--low)">只听低频</button>
+            <button class="mode-button" data-mode="mid" type="button" style="--active-color: var(--mid)">只听中频</button>
+            <button class="mode-button" data-mode="high" type="button" style="--active-color: var(--high)">只听高频</button>
+            <button class="mode-button" data-mode="rebuild" type="button" style="--active-color: var(--cyan)">合成重建</button>
+          </div>
+        </div>
+
+        <section class="spectrum" aria-label="频谱峰">
+          <div class="spectrum-header">
+            <div>
+              <div class="eyebrow">SPECTRUM</div>
+              <h2 class="section-title">频谱峰</h2>
+            </div>
+            <div class="hint" id="spectrumHint">当前参与播放的频率峰会亮起</div>
+          </div>
+          <canvas id="spectrumCanvas" aria-label="低频、中频、高频的频谱峰"></canvas>
+        </section>
+
+        <div class="component-list" aria-label="频率成分说明">
+          <div class="component-chip"><span class="dot" style="--dot-color: var(--low)"></span><strong>低频骨架</strong><span>150 Hz</span></div>
+          <div class="component-chip"><span class="dot" style="--dot-color: var(--mid)"></span><strong>中频主体</strong><span>300 Hz</span></div>
+          <div class="component-chip"><span class="dot" style="--dot-color: var(--high)"></span><strong>高频细节</strong><span>750 Hz</span></div>
+        </div>
+      </aside>
+    </main>
+
+    <section class="formula-band" aria-label="傅立叶分解公式">
+      <div class="formula">
+        <span class="token token-original" data-token="original">原声 <small>mixed sound</small></span>
+        <span>=</span>
+        <span class="token token-low" data-token="low">低频骨架</span>
+        <span>+</span>
+        <span class="token token-mid" data-token="mid">中频主体</span>
+        <span>+</span>
+        <span class="token token-high" data-token="high">高频细节</span>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const components = {
+      low: {
+        label: '低频骨架',
+        frequency: 150,
+        amplitude: 0.42,
+        audioGain: 0.18,
+        phase: 0.1,
+        color: '#9cf180'
+      },
+      mid: {
+        label: '中频主体',
+        frequency: 300,
+        amplitude: 0.32,
+        audioGain: 0.13,
+        phase: 0.35,
+        color: '#ffc247'
+      },
+      high: {
+        label: '高频细节',
+        frequency: 750,
+        amplitude: 0.18,
+        audioGain: 0.055,
+        phase: 0.72,
+        color: '#ff82ce'
+      }
+    };
+
+    const modes = {
+      original: {
+        label: '原声',
+        status: '原声：低频、中频、高频一起播放',
+        active: ['low', 'mid', 'high'],
+        formula: ['original', 'low', 'mid', 'high']
+      },
+      low: {
+        label: '只听低频',
+        status: '只听低频：保留骨架和厚度',
+        active: ['low'],
+        formula: ['low']
+      },
+      mid: {
+        label: '只听中频',
+        status: '只听中频：保留声音主体',
+        active: ['mid'],
+        formula: ['mid']
+      },
+      high: {
+        label: '只听高频',
+        status: '只听高频：保留轻微亮度',
+        active: ['high'],
+        formula: ['high']
+      },
+      rebuild: {
+        label: '合成重建',
+        status: '合成重建：三个频段重新相加',
+        active: ['low', 'mid', 'high'],
+        formula: ['original', 'low', 'mid', 'high']
+      }
+    };
+
+    const waveCanvas = document.getElementById('waveCanvas');
+    const spectrumCanvas = document.getElementById('spectrumCanvas');
+    const playhead = document.getElementById('playhead');
+    const playButton = document.getElementById('playButton');
+    const resetButton = document.getElementById('resetButton');
+    const statusMode = document.getElementById('statusMode');
+    const statusDetail = document.getElementById('statusDetail');
+    const waveHint = document.getElementById('waveHint');
+    const spectrumHint = document.getElementById('spectrumHint');
+    const modeButtons = [...document.querySelectorAll('.mode-button')];
+    const laneLabels = [...document.querySelectorAll('[data-lane-label]')];
+    const formulaTokens = [...document.querySelectorAll('[data-token]')];
+    const meters = {
+      low: {
+        bar: document.getElementById('lowMeter'),
+        text: document.getElementById('lowMeterText')
+      },
+      mid: {
+        bar: document.getElementById('midMeter'),
+        text: document.getElementById('midMeterText')
+      },
+      high: {
+        bar: document.getElementById('highMeter'),
+        text: document.getElementById('highMeterText')
+      }
+    };
+
+    let currentMode = 'original';
+    let isPlaying = false;
+    let audioContext;
+    let masterGain;
+    let audioNodes = {};
+    let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    function resizeCanvas(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      dpr = Math.max(1, window.devicePixelRatio || 1);
+      const width = Math.max(1, Math.floor(rect.width * dpr));
+      const height = Math.max(1, Math.floor(rect.height * dpr));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+    }
+
+    function ensureAudio() {
+      if (audioContext) return true;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        statusMode.textContent = '当前浏览器不支持 Web Audio';
+        statusDetail.textContent = '请用新版 Edge、Chrome 或 Safari 打开这个页面';
+        return false;
+      }
+      audioContext = new AudioContextClass();
+      masterGain = audioContext.createGain();
+      masterGain.gain.value = 0;
+      masterGain.connect(audioContext.destination);
+
+      Object.entries(components).forEach(([key, component]) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = component.frequency;
+        gain.gain.value = 0;
+        oscillator.connect(gain);
+        gain.connect(masterGain);
+        oscillator.start();
+        audioNodes[key] = { oscillator, gain };
+      });
+      return true;
+    }
+
+    function setGainSmooth(gainNode, value) {
+      if (!audioContext || !gainNode) return;
+      const now = audioContext.currentTime;
+      gainNode.gain.cancelScheduledValues(now);
+      gainNode.gain.setTargetAtTime(value, now, 0.03);
+    }
+
+    function activeKeys(mode = currentMode) {
+      return modes[mode].active;
+    }
+
+    function componentIsActive(key, mode = currentMode) {
+      return activeKeys(mode).includes(key);
+    }
+
+    function laneIsActive(lane) {
+      if (lane === 'original') return currentMode === 'original' || currentMode === 'rebuild';
+      return componentIsActive(lane);
+    }
+
+    function updateAudioGains() {
+      if (!audioContext) return;
+      Object.entries(components).forEach(([key, component]) => {
+        const value = isPlaying && componentIsActive(key) ? component.audioGain : 0;
+        setGainSmooth(audioNodes[key].gain, value);
+      });
+      setGainSmooth(masterGain, isPlaying ? 0.82 : 0);
+    }
+
+    async function togglePlay() {
+      if (!ensureAudio()) return;
+      try {
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+      } catch (error) {
+        statusMode.textContent = '声音启动被浏览器拦截';
+        statusDetail.textContent = '请再点击一次播放，或检查当前标签页是否允许播放声音';
+        console.error(error);
+        return;
+      }
+      isPlaying = !isPlaying;
+      playButton.textContent = isPlaying ? '⏸ 暂停' : '▶ 播放';
+      updateAudioGains();
+      updateStatus();
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      updateAudioGains();
+      updateStatus();
+    }
+
+    function resetDemo() {
+      currentMode = 'original';
+      setMode('original');
+    }
+
+    function updateStatus() {
+      const mode = modes[currentMode];
+      statusMode.textContent = isPlaying ? mode.label : `${mode.label}（已暂停）`;
+      statusDetail.textContent = mode.status;
+      waveHint.textContent = currentMode === 'original' || currentMode === 'rebuild'
+        ? '三个分量共同参与，下面三条轨道同时显示'
+        : '只保留当前频段，其余分量变成直线';
+      spectrumHint.textContent = currentMode === 'original' || currentMode === 'rebuild'
+        ? '三个频谱峰一起亮起'
+        : `只高亮 ${activeKeys().map(key => components[key].label).join('、')} 的频谱峰`;
+
+      modeButtons.forEach(button => {
+        button.classList.toggle('is-active', button.dataset.mode === currentMode);
+      });
+      laneLabels.forEach(label => {
+        label.classList.toggle('is-muted', !laneIsActive(label.dataset.laneLabel));
+      });
+      formulaTokens.forEach(token => {
+        token.classList.toggle('is-muted', !modes[currentMode].formula.includes(token.dataset.token));
+      });
+      Object.keys(meters).forEach(key => {
+        const active = componentIsActive(key);
+        const percent = active ? Math.round((components[key].audioGain / components.low.audioGain) * 100) : 0;
+        meters[key].bar.style.width = `${percent}%`;
+        meters[key].text.textContent = `${percent}%`;
+      });
+    }
+
+    function sampleComponent(key, t) {
+      const c = components[key];
+      return Math.sin(2 * Math.PI * c.frequency * t + c.phase) * c.amplitude;
+    }
+
+    function mixedSample(t) {
+      return activeKeys().reduce((sum, key) => sum + sampleComponent(key, t), 0) * 0.78;
+    }
+
+    function drawWave() {
+      resizeCanvas(waveCanvas);
+      const ctx = waveCanvas.getContext('2d');
+      const width = waveCanvas.width;
+      const height = waveCanvas.height;
+      const labelWidth = (window.innerWidth <= 720 ? 122 : 166) * dpr;
+      const left = labelWidth + 20 * dpr;
+      const right = width - 24 * dpr;
+      const laneHeight = height / 4;
+      const visualSeconds = 0.029;
+      const trackWidth = Math.max(1, right - left);
+      const markerProgress = isPlaying ? ((performance.now() / 1000) * 0.18) % 1 : 0.05;
+      const markerX = left + markerProgress * trackWidth;
+      const lanes = [
+        { key: 'original', color: components.low.color, label: '原声' },
+        { key: 'low', color: components.low.color, label: '低频骨架' },
+        { key: 'mid', color: components.mid.color, label: '中频主体' },
+        { key: 'high', color: components.high.color, label: '高频细节' }
+      ];
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#06111b';
+      ctx.fillRect(0, 0, width, height);
+
+      for (let i = 0; i < 4; i += 1) {
+        const top = i * laneHeight;
+        const center = top + laneHeight / 2;
+        ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.018)' : 'rgba(255,255,255,0.032)';
+        ctx.fillRect(0, top, width, laneHeight);
+        ctx.strokeStyle = 'rgba(146,197,220,0.18)';
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(0, top + laneHeight);
+        ctx.lineTo(width, top + laneHeight);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+        ctx.setLineDash([5 * dpr, 8 * dpr]);
+        ctx.beginPath();
+        ctx.moveTo(left, center);
+        ctx.lineTo(right, center);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      lanes.forEach((lane, index) => {
+        const top = index * laneHeight;
+        const center = top + laneHeight / 2;
+        const amplitudeScale = laneHeight * 0.38;
+        const active = laneIsActive(lane.key);
+        const drawWidth = trackWidth;
+
+        ctx.lineWidth = active ? 3 * dpr : 2 * dpr;
+        ctx.strokeStyle = active ? (lane.key === 'original' ? '#dff8ff' : lane.color) : 'rgba(210,230,236,0.3)';
+        ctx.shadowColor = active ? (lane.key === 'original' ? 'rgba(223,248,255,0.42)' : lane.color) : 'transparent';
+        ctx.shadowBlur = active ? 12 * dpr : 0;
+        ctx.beginPath();
+
+        for (let x = 0; x <= drawWidth; x += 2 * dpr) {
+          const progress = x / drawWidth;
+          const t = progress * visualSeconds;
+          let y = center;
+          if (active) {
+            const value = lane.key === 'original' ? mixedSample(t) : sampleComponent(lane.key, t);
+            y = center - value * amplitudeScale * 1.65;
+          }
+          if (x === 0) ctx.moveTo(left + x, y);
+          else ctx.lineTo(left + x, y);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        if (active) {
+          ctx.fillStyle = lane.key === 'original' ? 'rgba(223,248,255,0.9)' : lane.color;
+          ctx.beginPath();
+          ctx.arc(markerX, center, 4.2 * dpr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      playhead.style.setProperty('--playhead', `${markerProgress * (trackWidth / dpr)}px`);
+    }
+
+    function drawSpectrum() {
+      resizeCanvas(spectrumCanvas);
+      const ctx = spectrumCanvas.getContext('2d');
+      const width = spectrumCanvas.width;
+      const height = spectrumCanvas.height;
+      const left = 48 * dpr;
+      const right = width - 28 * dpr;
+      const bottom = height - 42 * dpr;
+      const top = 24 * dpr;
+      const minFreq = 80;
+      const maxFreq = 850;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#06111b';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.strokeStyle = 'rgba(146,197,220,0.18)';
+      ctx.lineWidth = 1 * dpr;
+      for (let i = 0; i <= 4; i += 1) {
+        const y = top + (bottom - top) * (i / 4);
+        ctx.beginPath();
+        ctx.moveTo(left, y);
+        ctx.lineTo(right, y);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = 'rgba(238,248,251,0.64)';
+      ctx.font = `${12 * dpr}px ui-sans-serif, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      [100, 300, 500, 700, 850].forEach(freq => {
+        const x = left + ((freq - minFreq) / (maxFreq - minFreq)) * (right - left);
+        ctx.strokeStyle = 'rgba(146,197,220,0.16)';
+        ctx.beginPath();
+        ctx.moveTo(x, top);
+        ctx.lineTo(x, bottom);
+        ctx.stroke();
+        ctx.fillText(`${freq}Hz`, x, bottom + 24 * dpr);
+      });
+
+      Object.entries(components).forEach(([key, component]) => {
+        const active = componentIsActive(key);
+        const x = left + ((component.frequency - minFreq) / (maxFreq - minFreq)) * (right - left);
+        const peakHeight = (component.amplitude / components.low.amplitude) * (bottom - top) * 0.84;
+        const y = bottom - peakHeight;
+        const color = active ? component.color : 'rgba(160,180,190,0.22)';
+
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = active ? 5 * dpr : 3 * dpr;
+        ctx.shadowColor = active ? component.color : 'transparent';
+        ctx.shadowBlur = active ? 18 * dpr : 0;
+        ctx.beginPath();
+        ctx.moveTo(x, bottom);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x - 15 * dpr, bottom);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x + 15 * dpr, bottom);
+        ctx.closePath();
+        ctx.globalAlpha = active ? 0.24 : 0.08;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = active ? component.color : 'rgba(160,180,190,0.38)';
+        ctx.font = `${active ? 13 * dpr : 12 * dpr}px ui-sans-serif, system-ui, sans-serif`;
+        ctx.fillText(component.label, x, Math.max(18 * dpr, y - 10 * dpr));
+      });
+    }
+
+    function render() {
+      drawWave();
+      drawSpectrum();
+      requestAnimationFrame(render);
+    }
+
+    window.startMixerPlayback = togglePlay;
+    window.resetMixerDemo = resetDemo;
+    modeButtons.forEach(button => {
+      button.addEventListener('click', () => setMode(button.dataset.mode));
+    });
+    window.addEventListener('resize', () => {
+      drawWave();
+      drawSpectrum();
+    });
+
+    updateStatus();
+    render();
+  </script>
+</body>
+</html>
