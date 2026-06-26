@@ -67,8 +67,7 @@
     }
 
     .nav-link,
-    .tool-button,
-    .mode-button {
+    .tool-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -91,8 +90,7 @@
     }
 
     .nav-link:hover,
-    .tool-button:hover,
-    .mode-button:hover {
+    .tool-button:hover {
       transform: translateY(-1px);
       border-color: rgba(103, 215, 239, 0.58);
       background: rgba(103, 215, 239, 0.1);
@@ -156,6 +154,15 @@
       background: rgba(3, 10, 16, 0.42);
     }
 
+    .wave-header,
+    .teacher-header {
+      min-height: 83px;
+    }
+
+    .wave-header .tool-button {
+      min-width: 138px;
+    }
+
     .eyebrow {
       color: var(--cyan);
       font-size: 12px;
@@ -200,7 +207,7 @@
       display: grid;
       grid-template-rows: repeat(4, 1fr);
       width: 166px;
-      pointer-events: none;
+      pointer-events: auto;
       border-right: 1px solid var(--line);
       background: linear-gradient(90deg, rgba(3, 10, 16, 0.86), rgba(3, 10, 16, 0.2));
     }
@@ -210,10 +217,33 @@
       flex-direction: column;
       justify-content: center;
       gap: 6px;
+      width: 100%;
       padding-left: 22px;
       border-bottom: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink);
       font-weight: 920;
+      text-align: left;
       transition: opacity 180ms ease, color 180ms ease;
+    }
+
+    .lane-toggle {
+      position: relative;
+      cursor: pointer;
+      padding-right: 12px;
+      outline: 0;
+      transition: opacity 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
+    }
+
+    .lane-toggle:hover,
+    .lane-toggle:focus-visible {
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .lane-toggle.is-selected {
+      color: var(--toggle-color, var(--ink));
+      background: rgba(255, 255, 255, 0.035);
+      box-shadow: inset 0 0 0 2px var(--toggle-color, var(--cyan));
     }
 
     .lane-label:last-child {
@@ -299,14 +329,8 @@
 
     .control-stack {
       display: grid;
-      gap: 14px;
-      padding: 16px;
-    }
-
-    .play-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
+      gap: 0;
+      padding: 0;
     }
 
     .tool-button.primary {
@@ -318,32 +342,89 @@
       font-weight: 920;
     }
 
-    .tool-button.secondary {
-      min-width: 68px;
-      color: var(--muted);
-      font-weight: 820;
+    .aligned-controls {
+      display: grid;
+      grid-template-rows: repeat(4, 1fr);
+      min-height: 540px;
+      height: min(60vh, 620px);
     }
 
-    .mode-grid {
+    .control-slot {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-content: center;
+      min-width: 0;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.018);
+    }
+
+    .control-slot:nth-child(odd) {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .control-slot:last-child {
+      border-bottom: 0;
+    }
+
+    .original-summary {
+      gap: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 780;
+    }
+
+    .original-summary strong {
+      color: var(--original);
+      font-size: 16px;
+      font-weight: 920;
+    }
+
+    .band-control {
+      display: grid;
       gap: 10px;
     }
 
-    .mode-button {
-      min-height: 48px;
-      padding: 0 10px;
-      color: var(--muted);
-      font-size: 14px;
-      font-weight: 860;
-      text-align: center;
+    .band-control-head,
+    .range-row label {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
     }
 
-    .mode-button.is-active {
-      color: #06111b;
-      border-color: rgba(255, 255, 255, 0.4);
-      background: var(--active-color, var(--cyan));
-      box-shadow: 0 12px 34px rgba(103, 215, 239, 0.16);
+    .band-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 920;
+    }
+
+    .band-readout,
+    .range-value {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 820;
+      white-space: nowrap;
+    }
+
+    .range-row {
+      display: grid;
+      gap: 7px;
+    }
+
+    .range-row label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .range-row input[type="range"] {
+      width: 100%;
+      height: 18px;
+      accent-color: var(--range-color, var(--cyan));
+      cursor: pointer;
     }
 
     .component-list {
@@ -508,9 +589,13 @@
         height: 300px;
       }
 
-      .meter-row,
-      .mode-grid {
+      .meter-row {
         grid-template-columns: 1fr;
+      }
+
+      .aligned-controls {
+        min-height: 480px;
+        height: 480px;
       }
 
       .formula {
@@ -539,15 +624,15 @@
             <div class="eyebrow">WAVE MIXER</div>
             <h2 class="section-title">四条波形轨道</h2>
           </div>
-          <div class="hint" id="waveHint">原声由三个温和频率同时相加</div>
+          <button class="tool-button primary" id="playButton" type="button" onclick="void window.startMixerPlayback()">▶ 播放</button>
         </div>
         <div class="wave-canvas-wrap">
           <canvas id="waveCanvas" aria-label="原声、低频、中频和高频波形"></canvas>
-          <div class="lane-labels" aria-hidden="true">
+          <div class="lane-labels" aria-label="频段开关">
             <div class="lane-label" data-lane-label="original">原声<span>混合结果</span></div>
-            <div class="lane-label" data-lane-label="low">低频骨架<span>150 Hz</span></div>
-            <div class="lane-label" data-lane-label="mid">中频主体<span>300 Hz</span></div>
-            <div class="lane-label" data-lane-label="high">高频细节<span>750 Hz</span></div>
+            <button class="lane-label lane-toggle is-selected" data-lane-label="low" data-band-toggle="low" type="button" aria-pressed="true" style="--toggle-color: var(--low)">低频骨架<span id="lowLaneFreq">150 Hz</span></button>
+            <button class="lane-label lane-toggle is-selected" data-lane-label="mid" data-band-toggle="mid" type="button" aria-pressed="true" style="--toggle-color: var(--mid)">中频主体<span id="midLaneFreq">300 Hz</span></button>
+            <button class="lane-label lane-toggle is-selected" data-lane-label="high" data-band-toggle="high" type="button" aria-pressed="true" style="--toggle-color: var(--high)">高频细节<span id="highLaneFreq">750 Hz</span></button>
           </div>
           <div class="playhead" id="playhead" aria-hidden="true"></div>
         </div>
@@ -568,27 +653,71 @@
 
       </section>
 
-      <aside class="panel teacher-panel" aria-label="播放控制与频谱峰">
+      <aside class="panel teacher-panel" aria-label="频段参数与频谱峰">
         <div class="teacher-header">
           <div>
             <div class="eyebrow">SOUND MIXER</div>
-            <h2 class="section-title">播放控制</h2>
+            <h2 class="section-title">频段参数</h2>
           </div>
-          <div class="hint">切换模式时，频谱峰同步高亮</div>
         </div>
 
         <div class="control-stack">
-          <div class="play-row">
-            <button class="tool-button primary" id="playButton" type="button" onclick="void window.startMixerPlayback()">▶ 播放</button>
-            <button class="tool-button secondary" id="resetButton" type="button" onclick="window.resetMixerDemo()">重置</button>
-          </div>
+          <div class="aligned-controls" aria-label="频率和振幅调节">
+            <div class="control-slot original-summary">
+              <span>原声</span>
+              <strong id="activeCountText">3 个频段参与</strong>
+            </div>
 
-          <div class="mode-grid" role="group" aria-label="播放模式">
-            <button class="mode-button is-active" data-mode="original" type="button" style="--active-color: var(--original)">原声</button>
-            <button class="mode-button" data-mode="low" type="button" style="--active-color: var(--low)">只听低频</button>
-            <button class="mode-button" data-mode="mid" type="button" style="--active-color: var(--mid)">只听中频</button>
-            <button class="mode-button" data-mode="high" type="button" style="--active-color: var(--high)">只听高频</button>
-            <button class="mode-button" data-mode="rebuild" type="button" style="--active-color: var(--cyan)">合成重建</button>
+            <div class="control-slot">
+              <div class="band-control" data-control="low" style="--range-color: var(--low)">
+                <div class="band-control-head">
+                  <span class="band-name"><span class="dot" style="--dot-color: var(--low)"></span>低频骨架</span>
+                  <span class="band-readout" id="lowReadout">150 Hz · 78%</span>
+                </div>
+                <div class="range-row">
+                  <label for="lowFrequency">频率 <span class="range-value" id="lowFrequencyValue">150 Hz</span></label>
+                  <input id="lowFrequency" data-band="low" data-param="frequency" type="range" min="100" max="220" step="1" value="150" />
+                </div>
+                <div class="range-row">
+                  <label for="lowAmplitude">振幅 <span class="range-value" id="lowAmplitudeValue">78%</span></label>
+                  <input id="lowAmplitude" data-band="low" data-param="level" type="range" min="0" max="100" step="1" value="78" />
+                </div>
+              </div>
+            </div>
+
+            <div class="control-slot">
+              <div class="band-control" data-control="mid" style="--range-color: var(--mid)">
+                <div class="band-control-head">
+                  <span class="band-name"><span class="dot" style="--dot-color: var(--mid)"></span>中频主体</span>
+                  <span class="band-readout" id="midReadout">300 Hz · 65%</span>
+                </div>
+                <div class="range-row">
+                  <label for="midFrequency">频率 <span class="range-value" id="midFrequencyValue">300 Hz</span></label>
+                  <input id="midFrequency" data-band="mid" data-param="frequency" type="range" min="240" max="520" step="1" value="300" />
+                </div>
+                <div class="range-row">
+                  <label for="midAmplitude">振幅 <span class="range-value" id="midAmplitudeValue">65%</span></label>
+                  <input id="midAmplitude" data-band="mid" data-param="level" type="range" min="0" max="100" step="1" value="65" />
+                </div>
+              </div>
+            </div>
+
+            <div class="control-slot">
+              <div class="band-control" data-control="high" style="--range-color: var(--high)">
+                <div class="band-control-head">
+                  <span class="band-name"><span class="dot" style="--dot-color: var(--high)"></span>高频细节</span>
+                  <span class="band-readout" id="highReadout">750 Hz · 47%</span>
+                </div>
+                <div class="range-row">
+                  <label for="highFrequency">频率 <span class="range-value" id="highFrequencyValue">750 Hz</span></label>
+                  <input id="highFrequency" data-band="high" data-param="frequency" type="range" min="560" max="950" step="1" value="750" />
+                </div>
+                <div class="range-row">
+                  <label for="highAmplitude">振幅 <span class="range-value" id="highAmplitudeValue">47%</span></label>
+                  <input id="highAmplitude" data-band="high" data-param="level" type="range" min="0" max="100" step="1" value="47" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -604,9 +733,9 @@
         </section>
 
         <div class="component-list" aria-label="频率成分说明">
-          <div class="component-chip"><span class="dot" style="--dot-color: var(--low)"></span><strong>低频骨架</strong><span>150 Hz</span></div>
-          <div class="component-chip"><span class="dot" style="--dot-color: var(--mid)"></span><strong>中频主体</strong><span>300 Hz</span></div>
-          <div class="component-chip"><span class="dot" style="--dot-color: var(--high)"></span><strong>高频细节</strong><span>750 Hz</span></div>
+          <div class="component-chip"><span class="dot" style="--dot-color: var(--low)"></span><strong>低频骨架</strong><span id="lowChipFreq">150 Hz</span></div>
+          <div class="component-chip"><span class="dot" style="--dot-color: var(--mid)"></span><strong>中频主体</strong><span id="midChipFreq">300 Hz</span></div>
+          <div class="component-chip"><span class="dot" style="--dot-color: var(--high)"></span><strong>高频细节</strong><span id="highChipFreq">750 Hz</span></div>
         </div>
       </aside>
     </main>
@@ -629,74 +758,91 @@
       low: {
         label: '低频骨架',
         frequency: 150,
+        defaultFrequency: 150,
+        level: 78,
+        defaultLevel: 78,
         amplitude: 0.42,
+        maxAmplitude: 0.54,
         audioGain: 0.18,
+        maxAudioGain: 0.23,
         phase: 0.1,
         color: '#9cf180'
       },
       mid: {
         label: '中频主体',
         frequency: 300,
+        defaultFrequency: 300,
+        level: 65,
+        defaultLevel: 65,
         amplitude: 0.32,
+        maxAmplitude: 0.49,
         audioGain: 0.13,
+        maxAudioGain: 0.2,
         phase: 0.35,
         color: '#ffc247'
       },
       high: {
         label: '高频细节',
         frequency: 750,
+        defaultFrequency: 750,
+        level: 47,
+        defaultLevel: 47,
         amplitude: 0.18,
+        maxAmplitude: 0.38,
         audioGain: 0.055,
+        maxAudioGain: 0.115,
         phase: 0.72,
         color: '#ff82ce'
       }
     };
 
-    const modes = {
-      original: {
-        label: '原声',
-        status: '原声：低频、中频、高频一起播放',
-        active: ['low', 'mid', 'high'],
-        formula: ['original', 'low', 'mid', 'high']
-      },
-      low: {
-        label: '只听低频',
-        status: '只听低频：保留骨架和厚度',
-        active: ['low'],
-        formula: ['low']
-      },
-      mid: {
-        label: '只听中频',
-        status: '只听中频：保留声音主体',
-        active: ['mid'],
-        formula: ['mid']
-      },
-      high: {
-        label: '只听高频',
-        status: '只听高频：保留轻微亮度',
-        active: ['high'],
-        formula: ['high']
-      },
-      rebuild: {
-        label: '合成重建',
-        status: '合成重建：三个频段重新相加',
-        active: ['low', 'mid', 'high'],
-        formula: ['original', 'low', 'mid', 'high']
-      }
+    const selectedBands = {
+      low: true,
+      mid: true,
+      high: true
     };
 
     const waveCanvas = document.getElementById('waveCanvas');
     const spectrumCanvas = document.getElementById('spectrumCanvas');
     const playhead = document.getElementById('playhead');
     const playButton = document.getElementById('playButton');
-    const resetButton = document.getElementById('resetButton');
     const statusMode = document.getElementById('statusMode');
     const statusDetail = document.getElementById('statusDetail');
-    const waveHint = document.getElementById('waveHint');
     const spectrumHint = document.getElementById('spectrumHint');
-    const modeButtons = [...document.querySelectorAll('.mode-button')];
+    const bandInputs = [...document.querySelectorAll('[data-band][data-param]')];
+    const bandToggleButtons = [...document.querySelectorAll('[data-band-toggle]')];
     const laneLabels = [...document.querySelectorAll('[data-lane-label]')];
     const formulaTokens = [...document.querySelectorAll('[data-token]')];
+    const activeCountText = document.getElementById('activeCountText');
+    const bandUi = {
+      low: {
+        readout: document.getElementById('lowReadout'),
+        frequencyValue: document.getElementById('lowFrequencyValue'),
+        amplitudeValue: document.getElementById('lowAmplitudeValue'),
+        laneFreq: document.getElementById('lowLaneFreq'),
+        chipFreq: document.getElementById('lowChipFreq'),
+        frequencyInput: document.getElementById('lowFrequency'),
+        amplitudeInput: document.getElementById('lowAmplitude')
+      },
+      mid: {
+        readout: document.getElementById('midReadout'),
+        frequencyValue: document.getElementById('midFrequencyValue'),
+        amplitudeValue: document.getElementById('midAmplitudeValue'),
+        laneFreq: document.getElementById('midLaneFreq'),
+        chipFreq: document.getElementById('midChipFreq'),
+        frequencyInput: document.getElementById('midFrequency'),
+        amplitudeInput: document.getElementById('midAmplitude')
+      },
+      high: {
+        readout: document.getElementById('highReadout'),
+        frequencyValue: document.getElementById('highFrequencyValue'),
+        amplitudeValue: document.getElementById('highAmplitudeValue'),
+        laneFreq: document.getElementById('highLaneFreq'),
+        chipFreq: document.getElementById('highChipFreq'),
+        frequencyInput: document.getElementById('highFrequency'),
+        amplitudeInput: document.getElementById('highAmplitude')
+      }
+    };
     const meters = {
       low: {
         bar: document.getElementById('lowMeter'),
@@ -712,7 +858,6 @@
       }
     };
 
-    let currentMode = 'original';
     let isPlaying = false;
     let audioContext;
     let masterGain;
@@ -764,16 +909,52 @@
       gainNode.gain.setTargetAtTime(value, now, 0.03);
     }
 
-    function activeKeys(mode = currentMode) {
-      return modes[mode].active;
+    function applyAmplitudeLevel(key, level) {
+      const component = components[key];
+      component.level = Math.max(0, Math.min(100, level));
+      component.amplitude = component.maxAmplitude * (component.level / 100);
+      component.audioGain = component.maxAudioGain * (component.level / 100);
     }
 
-    function componentIsActive(key, mode = currentMode) {
-      return activeKeys(mode).includes(key);
+    function updateComponentUi(key) {
+      const component = components[key];
+      const ui = bandUi[key];
+      const frequencyText = `${Math.round(component.frequency)} Hz`;
+      const levelText = `${Math.round(component.level)}%`;
+      ui.readout.textContent = `${frequencyText} · ${levelText}`;
+      ui.frequencyValue.textContent = frequencyText;
+      ui.amplitudeValue.textContent = levelText;
+      ui.laneFreq.textContent = frequencyText;
+      ui.chipFreq.textContent = frequencyText;
+      ui.frequencyInput.value = String(Math.round(component.frequency));
+      ui.amplitudeInput.value = String(Math.round(component.level));
+    }
+
+    function updateAllComponentUi() {
+      Object.keys(components).forEach(updateComponentUi);
+    }
+
+    function updateAudioFrequencies() {
+      if (!audioContext) return;
+      const now = audioContext.currentTime;
+      Object.entries(components).forEach(([key, component]) => {
+        const node = audioNodes[key];
+        if (!node) return;
+        node.oscillator.frequency.cancelScheduledValues(now);
+        node.oscillator.frequency.setTargetAtTime(component.frequency, now, 0.025);
+      });
+    }
+
+    function activeKeys() {
+      return Object.keys(components).filter(key => selectedBands[key]);
+    }
+
+    function componentIsActive(key) {
+      return Boolean(selectedBands[key]);
     }
 
     function laneIsActive(lane) {
-      if (lane === 'original') return currentMode === 'original' || currentMode === 'rebuild';
+      if (lane === 'original') return activeKeys().length > 0;
       return componentIsActive(lane);
     }
 
@@ -804,40 +985,36 @@
       updateStatus();
     }
 
-    function setMode(mode) {
-      currentMode = mode;
-      updateAudioGains();
-      updateStatus();
-    }
-
-    function resetDemo() {
-      currentMode = 'original';
-      setMode('original');
-    }
-
     function updateStatus() {
-      const mode = modes[currentMode];
-      statusMode.textContent = isPlaying ? mode.label : `${mode.label}（已暂停）`;
-      statusDetail.textContent = mode.status;
-      waveHint.textContent = currentMode === 'original' || currentMode === 'rebuild'
-        ? '三个分量共同参与，下面三条轨道同时显示'
-        : '只保留当前频段，其余分量变成直线';
-      spectrumHint.textContent = currentMode === 'original' || currentMode === 'rebuild'
-        ? '三个频谱峰一起亮起'
-        : `只高亮 ${activeKeys().map(key => components[key].label).join('、')} 的频谱峰`;
+      const active = activeKeys();
+      const activeLabels = active.map(key => components[key].label);
+      statusMode.textContent = isPlaying ? '播放中' : '已暂停';
+      statusDetail.textContent = active.length
+        ? `当前参与：${activeLabels.join('、')}`
+        : '当前没有点亮频段';
+      spectrumHint.textContent = active.length
+        ? `高亮：${activeLabels.join('、')}`
+        : '没有频谱峰被点亮';
+      activeCountText.textContent = active.length
+        ? `${active.length} 个频段参与`
+        : '没有频段参与';
 
-      modeButtons.forEach(button => {
-        button.classList.toggle('is-active', button.dataset.mode === currentMode);
+      bandToggleButtons.forEach(button => {
+        const activeBand = componentIsActive(button.dataset.bandToggle);
+        button.classList.toggle('is-selected', activeBand);
+        button.setAttribute('aria-pressed', String(activeBand));
       });
       laneLabels.forEach(label => {
         label.classList.toggle('is-muted', !laneIsActive(label.dataset.laneLabel));
       });
       formulaTokens.forEach(token => {
-        token.classList.toggle('is-muted', !modes[currentMode].formula.includes(token.dataset.token));
+        const tokenKey = token.dataset.token;
+        const isActive = tokenKey === 'original' ? active.length > 0 : componentIsActive(tokenKey);
+        token.classList.toggle('is-muted', !isActive);
       });
       Object.keys(meters).forEach(key => {
         const active = componentIsActive(key);
-        const percent = active ? Math.round((components[key].audioGain / components.low.audioGain) * 100) : 0;
+        const percent = active ? Math.round(components[key].level) : 0;
         meters[key].bar.style.width = `${percent}%`;
         meters[key].text.textContent = `${percent}%`;
       });
@@ -945,7 +1122,8 @@
       const bottom = height - 42 * dpr;
       const top = 24 * dpr;
       const minFreq = 80;
-      const maxFreq = 850;
+      const maxFreq = 1000;
+      const maxVisualAmplitude = Math.max(...Object.values(components).map(component => component.maxAmplitude));
 
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = '#06111b';
@@ -964,7 +1142,7 @@
       ctx.fillStyle = 'rgba(238,248,251,0.64)';
       ctx.font = `${12 * dpr}px ui-sans-serif, system-ui, sans-serif`;
       ctx.textAlign = 'center';
-      [100, 300, 500, 700, 850].forEach(freq => {
+      [100, 300, 500, 700, 900].forEach(freq => {
         const x = left + ((freq - minFreq) / (maxFreq - minFreq)) * (right - left);
         ctx.strokeStyle = 'rgba(146,197,220,0.16)';
         ctx.beginPath();
@@ -977,7 +1155,7 @@
       Object.entries(components).forEach(([key, component]) => {
         const active = componentIsActive(key);
         const x = left + ((component.frequency - minFreq) / (maxFreq - minFreq)) * (right - left);
-        const peakHeight = (component.amplitude / components.low.amplitude) * (bottom - top) * 0.84;
+        const peakHeight = (component.amplitude / maxVisualAmplitude) * (bottom - top) * 0.84;
         const y = bottom - peakHeight;
         const color = active ? component.color : 'rgba(160,180,190,0.22)';
 
@@ -1014,15 +1192,39 @@
     }
 
     window.startMixerPlayback = togglePlay;
-    window.resetMixerDemo = resetDemo;
-    modeButtons.forEach(button => {
-      button.addEventListener('click', () => setMode(button.dataset.mode));
+    bandToggleButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const key = button.dataset.bandToggle;
+        selectedBands[key] = !selectedBands[key];
+        updateAudioGains();
+        updateStatus();
+      });
+    });
+    bandInputs.forEach(input => {
+      input.addEventListener('input', () => {
+        const key = input.dataset.band;
+        const param = input.dataset.param;
+        const value = Number(input.value);
+        if (param === 'frequency') {
+          components[key].frequency = value;
+          updateAudioFrequencies();
+        } else {
+          applyAmplitudeLevel(key, value);
+          updateAudioGains();
+        }
+        updateComponentUi(key);
+        updateStatus();
+      });
     });
     window.addEventListener('resize', () => {
       drawWave();
       drawSpectrum();
     });
 
+    Object.entries(components).forEach(([key, component]) => {
+      applyAmplitudeLevel(key, component.level);
+    });
+    updateAllComponentUi();
     updateStatus();
     render();
   </script>
